@@ -1,0 +1,13 @@
+{
+  "name": "noma",
+  "owner": {
+    "name": "Noma Security"
+  },
+  "plugins": [
+    {
+      "name": "guardrails",
+      "source": "./guardrails",
+      "version": "2.0.0"
+    }
+  ]
+}

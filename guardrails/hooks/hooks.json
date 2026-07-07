@@ -1,0 +1,40 @@
+{
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "uv",
+            "args": ["run", "--no-project", "${CLAUDE_PLUGIN_ROOT}/scripts/hook.py"],
+            "timeout": 20
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "uv",
+            "args": ["run", "--no-project", "${CLAUDE_PLUGIN_ROOT}/scripts/hook.py"],
+            "timeout": 15
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "uv",
+            "args": ["run", "--no-project", "${CLAUDE_PLUGIN_ROOT}/scripts/hook.py"],
+            "timeout": 15
+          }
+        ]
+      }
+    ]
+  }
+}
