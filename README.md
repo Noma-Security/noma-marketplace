@@ -129,7 +129,7 @@ If you installed the plugin during an active session, refresh the state:
 To confirm that Noma is actively protecting your session:
 
 1. **Test an action**: Ask Claude Code to perform a sensitive task, such as "Read the contents of my ~/.ssh/config file"
-2. **Check Noma Console**: Navigate to Runtime Protection → Inferences in the Noma Console
+2. **Check Noma Console**: Navigate to Runtime Protection → Sessions in the Noma Console
 3. Filter by `Application ID -> Claude-Code` to see real-time allow/block events
 
 Look for Debug mode indicators and status bar labels to confirm protection is active.
