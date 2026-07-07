@@ -12,7 +12,7 @@ With Claude Code Hooks enabled, Noma acts as a security gatekeeper for the follo
 
 - **Shell execution**: Prevent unauthorized terminal commands or malicious script injections
 - **MCP tool execution**: Governs Model Context Protocol interactions and unauthorized tool use
-- **MCP server inventory** (all platforms): On every prompt, sends the MCP server configuration files. Only server identity fields (`type`, `url`, `command`, `args`) are sent per server, with secret-looking values masked — `env`, `headers`, and all other fields never leave your machine. Built in dependency-free Python (standard library only) and run via `uv`, so it behaves identically on macOS, and Windows
+- **MCP server inventory** (all platforms): On every prompt, sends the MCP server configuration files. Only server identity fields (`type`, `url`, `command`, `args`) are sent per server, with secret-looking values masked — `env`, `headers`, and all other fields never leave your machine. Built in dependency-free Python (standard library only) and run via `uv`, so it behaves identically on macOS, Linux, and Windows
 - **File reads**: Protects sensitive local data (e.g., `.env` files, SSH keys) from being indexed or sent to the LLM
 - **User prompt submission**: Scans and filters sensitive data, PCI, PII, PHI before it leaves your local environment
 
@@ -20,7 +20,7 @@ With Claude Code Hooks enabled, Noma acts as a security gatekeeper for the follo
 
 - **Claude Code v2.0.12+**: Ensure you are running a supported version of the CLI
 - **Noma API Key**: Request an API Key for this plugin from your Noma Technical Account manager (Note: This is not an API Key that you create within the Noma Console)
-- **Supported OS**: macOS, or Windows — one plugin, identical behavior on the two
+- **Supported OS**: macOS, Linux, or Windows — one plugin, identical behavior on all three
 - **[`uv`](https://docs.astral.sh/uv/)**: the hooks run via `uv` (Astral's Python runner), which supplies the Python the hook needs — no system `python3` or `pip` packages required. `uv` must be on the `PATH` of the environment Claude Code launches hooks in
 
 ## Installation
@@ -35,7 +35,7 @@ claude plugin marketplace add https://github.com/Noma-Security/noma-marketplace
 
 ### Step 2: Install the Guardrails Plugin
 
-One cross-platform plugin covers macOS, and Windows:
+One cross-platform plugin covers macOS, Linux, and Windows:
 
 ```bash
 claude plugin install guardrails@noma
@@ -75,7 +75,7 @@ If your organization manages Claude Code usage via a centralized `settings.json`
 
 With these settings pushed, users skip the manual `claude plugin marketplace add` / `claude plugin install` steps above.
 
-On macOS, the `env` block is optional: if the API key is provisioned in the OS credential store instead (see Option C — e.g. seeded by your MDM at deploy time), the managed settings only need `extraKnownMarketplaces` and `enabledPlugins`. On Windows the credential store is not supported at the moment, so the key must be delivered via the `env` block.
+On macOS and Linux, the `env` block is optional: if the API key is provisioned in the OS credential store instead (see Option C — e.g. seeded by your MDM at deploy time), the managed settings only need `extraKnownMarketplaces` and `enabledPlugins`. On Windows the credential store is not supported at the moment, so the key must be delivered via the `env` block.
 
 ### Option B: Local Environment
 
@@ -92,18 +92,21 @@ Claude Code injects everything under the `env` key into the hook's environment. 
 }
 ```
 
-### Option C: Operating System Credential Store (macOS only, Most Secure Local)
+### Option C: Operating System Credential Store (macOS & Linux, Most Secure Local)
 
-If `NOMA_API_KEY` is not set via env var or `settings.json`, the hook scripts will look it up from the macOS Keychain. The key is encrypted at rest by the OS and bound to your user account. This option is currently supported on macOS only — on Windows, use Option A or B.
+If `NOMA_API_KEY` is not set via env var or `settings.json`, the hook scripts will look it up from the OS credential store: the Keychain on macOS, or libsecret / GNOME Keyring (`secret-tool`) on Linux. The key is encrypted at rest by the OS and bound to your user account. This option is not supported on Windows — use Option A or B there.
 
 Store the key once:
 
 ```bash
-# -w with no value prompts for the key, so it never lands in your shell history
+# macOS — -w with no value prompts for the key, so it never lands in your shell history
 security add-generic-password -s "noma-guardrails" -a "$USER" -w
+
+# Linux — secret-tool prompts for the key (requires libsecret / GNOME Keyring)
+secret-tool store --label="Noma guardrails" service noma-guardrails username "$USER"
 ```
 
-The `guardrails` plugin retrieves it via `security find-generic-password` at hook fire time.
+The `guardrails` plugin retrieves it via `security find-generic-password` (macOS) or `secret-tool lookup` (Linux) at hook fire time.
 
 ## Activation
 
@@ -143,7 +146,7 @@ Look for Debug mode indicators and status bar labels to confirm protection is ac
 
 The hooks run via `uv run`. If hook events error with something like `uv: command not found`:
 
-- Confirm `uv` is installed and on the `PATH` of the environment Claude Code launches hooks in (`uv --version`). Install it with `brew install uv`, `winget install astral-sh.uv`, or your MDM
+- Confirm `uv` is installed and on the `PATH` of the environment Claude Code launches hooks in (`uv --version`). Install it with `brew install uv` (macOS), `winget install astral-sh.uv` (Windows), `curl -LsSf https://astral.sh/uv/install.sh | sh` (Linux), or your MDM
 - On a machine with no Python and no network, the first hook can be slow while `uv` provisions a Python — possibly exceeding the hook timeout. Pre-seed one with `uv python install` (your fleet's MDM can do this at deploy time)
 
 ### NOMA_API_KEY not found
@@ -152,7 +155,7 @@ The hook scripts look up the key in this order — first match wins:
 
 1. Environment variable `NOMA_API_KEY`
 2. `~/.claude/settings.json` (`env.NOMA_API_KEY`)
-3. OS credential store (macOS only): Keychain entry with service `noma-guardrails`
+3. OS credential store (macOS Keychain / Linux libsecret): entry with service `noma-guardrails`
 
 If none are configured, the hook silently sends nothing — by design it never interrupts your Claude Code session. Configure a key using one of the methods in the [Configuration](#configuration) section above. To confirm key resolution, set `NOMA_DEBUG=1` and check `~/.noma/claude-code-guardrails-debug.log`.
 
