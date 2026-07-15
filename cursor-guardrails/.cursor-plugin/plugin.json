@@ -1,0 +1,8 @@
+{
+  "name": "guardrails",
+  "displayName": "Noma Guardrails",
+  "description": "Noma AIDR guardrails for Cursor (macOS, Linux, Windows)",
+  "version": "1.0.0",
+  "author": { "name": "Noma Security" },
+  "hooks": "./hooks/hooks.json"
+}

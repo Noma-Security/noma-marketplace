@@ -1,0 +1,53 @@
+{
+  "version": 1,
+  "hooks": {
+    "preToolUse": [
+      {
+        "command": "uv run --no-project ${CURSOR_PLUGIN_ROOT}/scripts/hook.py",
+        "timeout": 30
+      }
+    ],
+    "beforeShellExecution": [
+      {
+        "command": "uv run --no-project ${CURSOR_PLUGIN_ROOT}/scripts/hook.py",
+        "timeout": 30
+      }
+    ],
+    "beforeMCPExecution": [
+      {
+        "command": "uv run --no-project ${CURSOR_PLUGIN_ROOT}/scripts/hook.py",
+        "timeout": 30
+      }
+    ],
+    "beforeReadFile": [
+      {
+        "command": "uv run --no-project ${CURSOR_PLUGIN_ROOT}/scripts/hook.py",
+        "timeout": 30
+      }
+    ],
+    "beforeSubmitPrompt": [
+      {
+        "command": "uv run --no-project ${CURSOR_PLUGIN_ROOT}/scripts/hook.py",
+        "timeout": 30
+      }
+    ],
+    "postToolUse": [
+      {
+        "command": "uv run --no-project ${CURSOR_PLUGIN_ROOT}/scripts/hook.py",
+        "timeout": 30
+      }
+    ],
+    "afterFileEdit": [
+      {
+        "command": "uv run --no-project ${CURSOR_PLUGIN_ROOT}/scripts/hook.py",
+        "timeout": 30
+      }
+    ],
+    "afterAgentResponse": [
+      {
+        "command": "uv run --no-project ${CURSOR_PLUGIN_ROOT}/scripts/hook.py",
+        "timeout": 30
+      }
+    ]
+  }
+}
