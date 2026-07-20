@@ -1,0 +1,52 @@
+{
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "command -v uv >/dev/null 2>&1 || exit 0; uv run --no-project \"${PLUGIN_ROOT}/scripts/codex_hook.py\" || true",
+            "commandWindows": "where uv >nul 2>&1 || exit /B 0 & uv run --no-project \"${PLUGIN_ROOT}\\scripts\\codex_hook.py\" || exit /B 0",
+            "timeout": 25
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "command -v uv >/dev/null 2>&1 || exit 0; uv run --no-project \"${PLUGIN_ROOT}/scripts/codex_hook.py\" || true",
+            "commandWindows": "where uv >nul 2>&1 || exit /B 0 & uv run --no-project \"${PLUGIN_ROOT}\\scripts\\codex_hook.py\" || exit /B 0",
+            "timeout": 25
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "command -v uv >/dev/null 2>&1 || exit 0; uv run --no-project \"${PLUGIN_ROOT}/scripts/codex_hook.py\" || true",
+            "commandWindows": "where uv >nul 2>&1 || exit /B 0 & uv run --no-project \"${PLUGIN_ROOT}\\scripts\\codex_hook.py\" || exit /B 0",
+            "timeout": 25
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "command -v uv >/dev/null 2>&1 || exit 0; uv run --no-project \"${PLUGIN_ROOT}/scripts/codex_hook.py\" || true",
+            "commandWindows": "where uv >nul 2>&1 || exit /B 0 & uv run --no-project \"${PLUGIN_ROOT}\\scripts\\codex_hook.py\" || exit /B 0",
+            "timeout": 25
+          }
+        ]
+      }
+    ]
+  }
+}
