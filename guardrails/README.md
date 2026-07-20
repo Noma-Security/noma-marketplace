@@ -1,27 +1,27 @@
-# Noma Security - Claude Code Hooks Plugin
+# Noma Security - Claude Code and Codex Hooks Plugin
 
-**Runtime Protection for Claude Code Agents**
+**Runtime Protection for Claude Code and Codex Agents**
 
-Noma Security provides active runtime protection for Claude Code by sitting between your AI agents and their intended actions. This plugin enables you to evaluate, allow, or block high-risk activities in real-time.
+Noma Security provides active runtime protection for Claude Code and Codex by sitting between your AI agents and their intended actions. This plugin enables you to evaluate, mask, or block high-risk activities in real-time.
 
 For more details, visit [noma.security](https://noma.security).
 
 ## What We Protect
 
-With Claude Code Hooks enabled, Noma acts as a security gatekeeper for the following high-risk agent actions:
+With coding-agent hooks enabled, Noma acts as a security gatekeeper for the following high-risk agent actions:
 
 - **Shell execution**: Prevent unauthorized terminal commands or malicious script injections
 - **MCP tool execution**: Governs Model Context Protocol interactions and unauthorized tool use
-- **MCP server inventory** (all platforms): On every prompt, sends the MCP server configuration files. Only server identity fields (`type`, `url`, `command`, `args`) are sent per server, with secret-looking values masked — `env`, `headers`, and all other fields never leave your machine. Built in dependency-free Python (standard library only) and run via `uv`, so it behaves identically on macOS, Linux, and Windows
+- **Claude Code MCP server inventory** (all platforms): On every prompt, sends the MCP server configuration files. Only server identity fields (`type`, `url`, `command`, `args`) are sent per server, with secret-looking values masked — `env`, `headers`, and all other fields never leave your machine. Built in dependency-free Python (standard library only) and run via `uv`, so it behaves identically on macOS, Linux, and Windows. Codex MCP access control is not part of this release
 - **File reads**: Protects sensitive local data (e.g., `.env` files, SSH keys) from being indexed or sent to the LLM
 - **User prompt submission**: Scans and filters sensitive data, PCI, PII, PHI before it leaves your local environment
 
 ## Prerequisites
 
-- **Claude Code v2.0.12+**: Ensure you are running a supported version of the CLI
+- **Claude Code v2.0.12+**: Ensure you are running a supported version of the CLI, or a current Codex CLI / ChatGPT desktop release for Codex
 - **Noma API Key**: Request an API Key for this plugin from your Noma Technical Account manager (Note: This is not an API Key that you create within the Noma Console)
 - **Supported OS**: macOS, Linux, or Windows — one plugin, identical behavior on all three
-- **[`uv`](https://docs.astral.sh/uv/)**: the hooks run via `uv` (Astral's Python runner), which supplies the Python the hook needs — no system `python3` or `pip` packages required. `uv` must be on the `PATH` of the environment Claude Code launches hooks in
+- **[`uv`](https://docs.astral.sh/uv/)**: the hooks run via `uv` (Astral's Python runner), which supplies the Python the hook needs — no system `python3` or `pip` packages required. `uv` must be on the `PATH` of the environment that launches the hooks
 
 ## Installation
 
@@ -43,9 +43,19 @@ claude plugin install guardrails@noma
 
 The hooks run a single Python entry point (`scripts/hook.py`) via `uv`, so the runtime and credential handling are identical on every OS.
 
+### Codex
+
+Add the marketplace from the CLI:
+
+```bash
+codex plugin marketplace add Noma-Security/noma-marketplace
+```
+
+Restart the ChatGPT desktop app, install `guardrails` from the Noma marketplace, then review and trust its hooks with `/hooks` in Codex. Codex can apply a validated mask before a tool runs; prompt, post-tool, and response (`Stop`) mask verdicts block because those events cannot replace content. For `Stop`, blocking asks Codex to continue with the detection reason; it cannot retract an already-produced response.
+
 ## Configuration
 
-To connect Claude Code to your Noma instance, you need to configure the `NOMA_API_KEY`.
+To connect the plugin to your Noma instance, configure `NOMA_API_KEY`. Codex reads it from the process environment or the same OS credential-store entry described below; Claude Code also supports its settings-based environment injection.
 
 ### Option A: Managed Settings (Recommended for Teams)
 
@@ -158,6 +168,8 @@ The hook scripts look up the key in this order — first match wins:
 3. OS credential store (macOS Keychain / Linux libsecret): entry with service `noma-guardrails`
 
 If none are configured, the hook silently sends nothing — by design it never interrupts your Claude Code session. Configure a key using one of the methods in the [Configuration](#configuration) section above. To confirm key resolution, set `NOMA_DEBUG=1` and check `~/.noma/claude-code-guardrails-debug.log`.
+
+For Codex, the debug log is `~/.noma/codex-guardrails-debug.log`.
 
 ### Managed settings are not appearing
 

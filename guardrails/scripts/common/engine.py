@@ -8,6 +8,7 @@ empty content and emits the rest. Stdlib only.
 
 import json
 import os
+import socket
 import sys
 
 from . import debug
@@ -48,6 +49,22 @@ def read_stdin():
     except Exception as e:
         debug.exc("read_stdin", e)
         return ""
+
+
+def enrich_identity(payload, username):
+    """Add endpoint identity to a payload, best-effort."""
+    try:
+        hostname = socket.gethostname()
+    except Exception as e:
+        debug.exc("gethostname", e)
+        hostname = ""
+    if hostname:
+        payload["hostname"] = hostname
+    if username:
+        payload["username"] = username
+    debug.log("enriched hostname=" + ("yes" if hostname else "no") +
+              " username=" + ("yes" if username else "no"))
+    return payload
 
 
 # --- artifact / payload assembly ---------------------------------------------
