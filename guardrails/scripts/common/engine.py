@@ -42,6 +42,20 @@ def file_exists(path):
     return os.path.exists(path)
 
 
+def canonical_path(path, path_mod=os.path):
+    """A path folded to one canonical spelling: separators/`.`/`..` collapsed
+    (normpath) and case normalized (normcase). Both are no-ops on POSIX.
+
+    For comparing two spellings of the same path ONLY. normcase lowercases on
+    Windows: opening the result usually still works (NTFS is case-insensitive
+    by default) but breaks on case-sensitive NTFS dirs (WSL trees) and SMB
+    shares, and a reported/shown path must keep its on-disk spelling — so use
+    real paths for I/O and artifacts, canonical ones for comparison keys.
+    path_mod defaults to os.path; pass ntpath to force Windows semantics (tests).
+    """
+    return path_mod.normcase(path_mod.normpath(path))
+
+
 def read_stdin():
     try:
         return sys.stdin.buffer.read().decode("utf-8")

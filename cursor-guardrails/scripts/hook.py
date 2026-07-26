@@ -28,6 +28,8 @@ except ImportError:
     sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
     from common import engine, credentials, transport, debug
 
+from cursor_mcp_discovery import discover_cursor
+
 # Noma-specific config, passed into the generic common/ package so it stays
 # agent-agnostic. Same credential-store service as the Claude Code plugin, so
 # one stored key serves both.
@@ -48,6 +50,17 @@ def enrich(payload):
         payload["hostname"] = host
     debug.log("enriched host=" + (host or "?"))
     return payload
+
+
+def attach_mcp_inventory(event, home):
+    """Attach the Cursor MCP inventory to a prompt event's payload.
+
+    Pure (no env/stdin) so it is directly unit-testable.
+    """
+    def _discoverer(discover_home, _cwd):
+        return discover_cursor(discover_home, event.get("workspace_roots"))
+
+    return engine.build_payload(event, _discoverer, home, "")
 
 
 def main():
@@ -75,8 +88,16 @@ def main():
         debug.exc("stdin JSON parse", e)
         event = None
 
-    if event is not None:
-        debug.log("event " + str(event.get("hook_event_name")))
+    if event is not None and event.get("hook_event_name") == "beforeSubmitPrompt":
+        # Augment the prompt event with the Cursor MCP inventory. The engine
+        # degrades to the event alone if discovery turns up nothing.
+        debug.log("event beforeSubmitPrompt; building MCP inventory")
+        home = os.environ.get("HOME") or os.path.expanduser("~")
+        payload = enrich(attach_mcp_inventory(event, home))
+        debug.log("MCP inventory: " + str(len(payload.get("mcp_artifacts") or [])) + " artifact(s)")
+        payload_str = json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
+    elif event is not None:
+        debug.log("event " + str(event.get("hook_event_name")) + "; no inventory")
         payload_str = json.dumps(enrich(event), ensure_ascii=False, separators=(",", ":"))
     else:
         # stdin was not valid JSON - forward it verbatim, unenriched.

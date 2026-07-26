@@ -12,6 +12,7 @@ For more details, visit [noma.security](https://noma.security).
 - **MCP tool execution**: governs Model Context Protocol interactions and unauthorized tool use
 - **File reads**: protects sensitive local data (e.g., `.env` files, SSH keys) from being indexed or sent to the LLM
 - **User prompt submission**: scans and filters sensitive data, PCI, PII, PHI before it leaves your local environment
+- **MCP server inventory**: on every prompt, sends the machine's Cursor MCP configuration (user, workspace, plugin, and marketplace scopes — mcp.json files plus plugin/marketplace manifest declarations). Only server identity fields (`type`, `url`, `command`, `args`) are sent per server, with secret-looking values masked — `env`, `headers`, and all other fields never leave your machine
 - **Everything else the agent does**: other tool calls are gated via Cursor's generic pre-tool-use hook, and post-action telemetry (tool outputs, file edits, assistant responses) streams to Noma for detection and visibility
 
 ## Prerequisites

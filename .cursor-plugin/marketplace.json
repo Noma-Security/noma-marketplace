@@ -10,7 +10,7 @@
     {
       "name": "guardrails",
       "source": "./cursor-guardrails",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "description": "Noma AIDR guardrails for Cursor (macOS, Windows)"
     }
   ]

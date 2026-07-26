@@ -12,15 +12,16 @@ import os
 import sys
 
 try:
-    from common import engine, debug
+    from common import engine, debug, mcp_utils
 except ImportError:
     sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-    from common import engine, debug
+    from common import engine, debug, mcp_utils
 
-# Claude-Code-specific config logic; a sibling script in this plugin (not part of
-# the generic vendored package). The bootstrap above put scripts/ on the path,
-# making both `common` and this module's siblings importable.
-import mcp_servers as servers
+
+# Path module for comparisons only (filesystem access stays on os.path).
+# Module-level so tests can repoint it to ntpath and exercise the Windows
+# comparison semantics on any host.
+_PATH_CMP = os.path
 
 
 # Enterprise-deployed config by OS (macOS, Linux, Windows) — the first path that
@@ -40,22 +41,9 @@ MANAGED_SETTINGS_PATHS = [
 ]
 
 
-# --- plugin manifests --------------------------------------------------------
-# Claude Code resolves a plugin's manifest at .claude-plugin/plugin.json (the
-# only supported location). These helpers keep that path in one place.
-
-def _plugin_manifest_path(install_path):
-    """Path to the plugin manifest, or None if it does not exist."""
-    path = os.path.join(install_path, ".claude-plugin", "plugin.json")
-    return path if engine.file_exists(path) else None
-
-
-def _manifest_field(install_path, field):
-    """A string field from the plugin manifest, or "" when absent."""
-    manifest = engine.read_json(os.path.join(install_path, ".claude-plugin", "plugin.json"))
-    if servers.is_object(manifest) and isinstance(manifest.get(field), str):
-        return manifest[field]
-    return ""
+# Claude Code holds both a plugin's plugin.json and a marketplace's
+# marketplace.json under a .claude-plugin subdirectory.
+_CLAUDE_PLUGIN_DIR = ".claude-plugin"
 
 
 # --- discovery helpers -------------------------------------------------------
@@ -66,12 +54,6 @@ def _first_existing(paths):
         if engine.file_exists(path):
             return path
     return None
-
-
-# Path module for comparisons only (filesystem access stays on os.path).
-# Module-level so tests can repoint it to ntpath and exercise the Windows
-# comparison semantics on any host.
-_PATH_CMP = os.path
 
 
 def _project_root(cwd):
@@ -144,30 +126,23 @@ def _same_path(left, right):
     (C:/Users/x/proj) while the hook's cwd arrives from the OS with
     backslashes (C:\Users\x\proj); case may differ too. Comparing them as raw
     strings therefore reports "project not in config" and silently drops its
-    servers from the inventory. normpath folds the separators, normcase the
+    servers from the inventory. engine.canonical_path folds separators and
     casing; both are no-ops on POSIX.
     """
-    return (_PATH_CMP.normcase(_PATH_CMP.normpath(left)) ==
-            _PATH_CMP.normcase(_PATH_CMP.normpath(right)))
-
-
-def _mcp_file_candidate(scope, path):
-    """A candidate for a dedicated MCP file (mcp.json / .mcp.json)."""
-    return (scope, "claude_mcp_json", path,
-            servers.server_content(engine.read_json(path)))
+    return engine.canonical_path(left, _PATH_CMP) == engine.canonical_path(right, _PATH_CMP)
 
 
 def _project_entry(projects, project_root):
     """The projects[...] entry for one candidate root, or {} when absent."""
     entry = projects.get(project_root)
-    if not servers.is_object(entry):
+    if not engine.is_object(entry):
         # An exact-key miss does not mean the project is absent: on Windows
         # the key and the root spell the same directory differently (see _same_path).
         for project_key in projects:
             if isinstance(project_key, str) and _same_path(project_key, project_root):
                 entry = projects[project_key]
                 break
-    return entry if servers.is_object(entry) else {}
+    return entry if engine.is_object(entry) else {}
 
 
 def _claude_json_candidates(home, project_root):
@@ -180,24 +155,30 @@ def _claude_json_candidates(home, project_root):
     """
     path = os.path.join(home, ".claude.json")
     doc = engine.read_json(path)
-    if not servers.is_object(doc):
+    if not engine.is_object(doc):
         return []
 
-    candidates = [("user", "claude_json", path, servers.server_content(doc))]
+    candidates = [("user", "claude_json", path, mcp_utils.build_server_content(doc))]
 
     projects = doc.get("projects")
-    if not servers.is_object(projects):
+    if not engine.is_object(projects):
         projects = {}
     entry = _project_entry(projects, project_root)
-    candidates.append(("local", "claude_json", path, servers.server_content(entry)))
+    candidates.append(("local", "claude_json", path, mcp_utils.build_server_content(entry)))
     return candidates
 
 
 def _discover_plugins(home, project_root):
+    """Installed-plugin artifacts (from the registry) plus marketplace-declared
+    servers (from the plugins tree)."""
+    return _discover_registry_plugins(home, project_root) + _discover_marketplaces(home)
+
+
+def _discover_registry_plugins(home, project_root):
     """One set of artifacts per installed plugin active for this project."""
     out = []
     registry = engine.read_json(os.path.join(home, ".claude", "plugins", "installed_plugins.json"))
-    if not (servers.is_object(registry) and servers.is_object(registry.get("plugins"))):
+    if not (engine.is_object(registry) and engine.is_object(registry.get("plugins"))):
         return out
     plugins = registry["plugins"]
     for plugin_key in plugins:
@@ -205,7 +186,7 @@ def _discover_plugins(home, project_root):
         if not isinstance(installs, list):
             continue
         for install in installs:
-            if not servers.is_object(install):
+            if not engine.is_object(install):
                 continue
             # A "local"-scoped install applies only to its own project.
             if install.get("scope") == "local":
@@ -215,30 +196,35 @@ def _discover_plugins(home, project_root):
             install_path = install.get("installPath")
             if not isinstance(install_path, str) or install_path == "":
                 continue
+            # The manifest's inline mcpServers (claude_plugin_json) plus any
+            # folder-discovered {mcp,.mcp}.json (claude_mcp_json), tagged with the
+            # plugin's name + version.
+            out.extend(mcp_utils.plugin_candidates(
+                "plugin", "claude_plugin_json", "claude_mcp_json", install_path, _CLAUDE_PLUGIN_DIR))
+    return out
 
-            # Full manifest: metadata + inline mcpServers (cleaned). Manifest
-            # mcpServers are additive to .mcp.json, so both are emitted.
-            manifest_path = _plugin_manifest_path(install_path)
-            if manifest_path:
-                out.append((
-                    "plugin", "claude_plugin_json", manifest_path,
-                    servers.manifest_content(engine.read_json(manifest_path)),
-                ))
 
-            # Dedicated server file, tagged with the plugin's manifest name +
-            # version (the backend needs the name to parse mcp__plugin_<name>_*
-            # tool calls; the version is reported alongside it). Parsed with the
-            # plugin-shape extractor: marketplace plugins ship this file as a
-            # bare {name: config} map, without the mcpServers wrapper.
-            mcp_file = os.path.join(install_path, ".mcp.json")
-            if engine.file_exists(mcp_file):
-                out.append((
-                    "plugin", "claude_mcp_json", mcp_file,
-                    servers.with_plugin_meta(
-                        servers.plugin_server_content(engine.read_json(mcp_file)),
-                        _manifest_field(install_path, "name"),
-                        _manifest_field(install_path, "version")),
-                ))
+def _discover_marketplaces(home):
+    """Marketplace-declared servers from every .claude-plugin/marketplace.json in
+    the plugins tree (claude_marketplace_json). Claude nests these at variable
+    depth, so the tree is walked; installed plugins are still sourced from the
+    registry, so only marketplace.json is read here."""
+    out = []
+    plugins_root = os.path.join(home, ".claude", "plugins")
+    # Guarded to return partial results: discover_claude_code builds one list
+    # per event, so a raise here would discard the other scopes' candidates
+    # too, and the resulting empty mcp_artifacts would clear the backend's
+    # cached inventory (empty-on-prompt means "no servers configured").
+    try:
+        for current, dirs, _files in os.walk(plugins_root):
+            dirs.sort()
+            if os.path.basename(current) != _CLAUDE_PLUGIN_DIR:
+                continue
+            if engine.file_exists(os.path.join(current, "marketplace.json")):
+                out.extend(mcp_utils.marketplace_candidates(
+                    "plugin", "claude_marketplace_json", os.path.dirname(current), _CLAUDE_PLUGIN_DIR))
+    except Exception as e:
+        debug.exc("claude plugin walk " + plugins_root, e)
     return out
 
 
@@ -262,27 +248,27 @@ def discover_claude_code(home, cwd):
 
     candidates = []
     candidates.extend(_claude_json_candidates(home, root))
-    candidates.append(_mcp_file_candidate("user", os.path.join(home, ".claude", "mcp.json")))
-    candidates.append(_mcp_file_candidate("project", os.path.join(root, ".mcp.json")))
+    candidates.extend(mcp_utils.mcp_file_candidates("user", "claude_mcp_json", os.path.join(home, ".claude")))
+    candidates.extend(mcp_utils.mcp_file_candidates("project", "claude_mcp_json", root))
     candidates.extend(_discover_plugins(home, root))
 
     # Managed MCP config (enterprise-deployed); first existing path wins.
     managed_mcp = _first_existing(MANAGED_MCP_PATHS)
     if managed_mcp:
         candidates.append(("managed", "claude_managed_mcp_json", managed_mcp,
-                           servers.server_content(engine.read_json(managed_mcp))))
+                           mcp_utils.build_server_content(engine.read_json(managed_mcp))))
 
     # Settings files hold unrelated/secret state, so only their mcpServers/servers
     # block is taken, never the whole file. Server-pushed "remote" settings
     # outrank enterprise "managed" settings.
     remote_settings = os.path.join(home, ".claude", "remote-settings.json")
     candidates.append(("remote", "claude_settings_json", remote_settings,
-                       servers.server_content(engine.read_json(remote_settings))))
+                       mcp_utils.build_server_content(engine.read_json(remote_settings))))
 
     managed_settings = _first_existing(MANAGED_SETTINGS_PATHS)
     if managed_settings:
         candidates.append(("managed", "claude_settings_json", managed_settings,
-                           servers.server_content(engine.read_json(managed_settings))))
+                           mcp_utils.build_server_content(engine.read_json(managed_settings))))
 
     if debug.enabled():
         for scope, kind, path, content in candidates:
