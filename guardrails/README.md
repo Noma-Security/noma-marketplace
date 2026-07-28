@@ -2,17 +2,17 @@
 
 **Runtime Protection for Claude Code Agents**
 
-Noma Security provides active runtime protection for Claude Code by sitting between your AI agents and their intended actions. This plugin enables you to evaluate, allow, or block high-risk activities in real-time.
+Noma Security provides active runtime protection for Claude Code by sitting between your AI agents and their intended actions. This plugin enables you to evaluate, mask, or block high-risk activities in real-time.
 
 For more details, visit [noma.security](https://noma.security).
 
 ## What We Protect
 
-With Claude Code Hooks enabled, Noma acts as a security gatekeeper for the following high-risk agent actions:
+With coding-agent hooks enabled, Noma acts as a security gatekeeper for the following high-risk agent actions:
 
 - **Shell execution**: Prevent unauthorized terminal commands or malicious script injections
 - **MCP tool execution**: Governs Model Context Protocol interactions and unauthorized tool use
-- **MCP server inventory** (all platforms): On every prompt, sends the MCP server configuration files. Only server identity fields (`type`, `url`, `command`, `args`) are sent per server, with secret-looking values masked — `env`, `headers`, and all other fields never leave your machine. Built in dependency-free Python (standard library only) and run via `uv`, so it behaves identically on macOS, Linux, and Windows
+- **Claude Code MCP server inventory** (all platforms): On every prompt, sends the MCP server configuration files. Only server identity fields (`type`, `url`, `command`, `args`) are sent per server, with secret-looking values masked — `env`, `headers`, and all other fields never leave your machine. The hook is built with dependency-free Python (standard library only) and runs via `uv`, so it behaves identically on macOS, Linux, and Windows
 - **File reads**: Protects sensitive local data (e.g., `.env` files, SSH keys) from being indexed or sent to the LLM
 - **User prompt submission**: Scans and filters sensitive data, PCI, PII, PHI before it leaves your local environment
 
@@ -21,7 +21,7 @@ With Claude Code Hooks enabled, Noma acts as a security gatekeeper for the follo
 - **Claude Code v2.0.12+**: Ensure you are running a supported version of the CLI
 - **Noma API Key**: Request an API Key for this plugin from your Noma Technical Account manager (Note: This is not an API Key that you create within the Noma Console)
 - **Supported OS**: macOS, Linux, or Windows — one plugin, identical behavior on all three
-- **[`uv`](https://docs.astral.sh/uv/)**: the hooks run via `uv` (Astral's Python runner), which supplies the Python the hook needs — no system `python3` or `pip` packages required. `uv` must be on the `PATH` of the environment Claude Code launches hooks in
+- **[`uv`](https://docs.astral.sh/uv/)**: the hooks run via `uv` (Astral's Python runner), which supplies the Python the hook needs — no system `python3` or `pip` packages required. `uv` must be on the `PATH` of the environment that launches the hooks
 
 ## Installation
 
@@ -45,7 +45,7 @@ The hooks run a single Python entry point (`scripts/hook.py`) via `uv`, so the r
 
 ## Configuration
 
-To connect Claude Code to your Noma instance, you need to configure the `NOMA_API_KEY`.
+To connect the plugin to your Noma instance, configure `NOMA_API_KEY`. Claude Code reads it from its settings-based environment injection or the OS credential-store entry described below.
 
 ### Option A: Managed Settings (Recommended for Teams)
 

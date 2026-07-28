@@ -18,7 +18,6 @@ common package carries the same constraint; see common/).
 
 import json
 import os
-import socket
 import sys
 
 try:
@@ -56,18 +55,7 @@ def enrich(payload):
 
     username is the Claude account email when the user is logged in, else the
     OS username."""
-    try:
-        host = socket.gethostname()
-    except Exception as e:
-        debug.exc("gethostname", e)
-        host = ""
-    user = account_email() or credentials.current_user()
-    if host:
-        payload["hostname"] = host
-    if user:
-        payload["username"] = user
-    debug.log("enriched host=" + (host or "?") + " user=" + (user or "?"))
-    return payload
+    return engine.enrich_identity(payload, account_email() or credentials.current_user())
 
 
 def main():

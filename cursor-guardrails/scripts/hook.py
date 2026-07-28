@@ -19,7 +19,6 @@ common package carries the same constraint; see common/).
 
 import json
 import os
-import socket
 import sys
 
 try:
@@ -41,15 +40,7 @@ DEBUG_LOG_FILENAME = "cursor-guardrails-debug.log"
 
 def enrich(payload):
     """Add the hostname to the payload dict (best-effort, never raises)."""
-    try:
-        host = socket.gethostname()
-    except Exception as e:
-        debug.exc("gethostname", e)
-        host = ""
-    if host:
-        payload["hostname"] = host
-    debug.log("enriched host=" + (host or "?"))
-    return payload
+    return engine.enrich_identity(payload, None)
 
 
 def attach_mcp_inventory(event, home):

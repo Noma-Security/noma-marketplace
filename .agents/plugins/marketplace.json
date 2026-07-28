@@ -1,0 +1,20 @@
+{
+  "name": "noma",
+  "interface": {
+    "displayName": "Noma Security"
+  },
+  "plugins": [
+    {
+      "name": "guardrails",
+      "source": {
+        "source": "local",
+        "path": "./codex-guardrails"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Developer Tools"
+    }
+  ]
+}

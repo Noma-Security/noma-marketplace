@@ -15,9 +15,9 @@ Windows.
 
 | Plugin       | Agent                                         | Docs                                                       |
 | ------------ | --------------------------------------------- | ---------------------------------------------------------- |
-| `guardrails` | [Claude Code](https://claude.com/claude-code) | [guardrails/README.md](guardrails/README.md)               |
-| `guardrails` | [Cursor](https://cursor.com)                  | [cursor-guardrails/README.md](cursor-guardrails/README.md) |
-
+| `guardrails` | [Claude Code](https://claude.com/claude-code) | [guardrails/README.md](guardrails/README.md)                     |
+| `guardrails` | [Codex](https://openai.com/codex/)            | [codex-guardrails/README.md](codex-guardrails/README.md)         |
+| `guardrails` | [Cursor](https://cursor.com)                  | [cursor-guardrails/README.md](cursor-guardrails/README.md)       |
 
 
 ## What We Protect
@@ -25,14 +25,13 @@ Windows.
 - **User prompts** — scan for sensitive data (PCI, PII, PHI) before it leaves your machine
 - **Shell execution** — evaluate terminal commands before they run
 - **MCP tool execution** — govern Model Context Protocol interactions and unauthorized tool use
-- **MCP server inventory** — report the agent's configured MCP servers per scope for organization-level access control (identity fields only, secrets masked)
+- **MCP server inventory** — report the agent's configured MCP servers per scope for organization-level access control (identity fields only, secrets masked; Codex MCP access control is not part of this release)
 - **File reads and edits** — protect sensitive local data (`.env` files, SSH keys) from being indexed or exfiltrated
 - **Agent responses** — track what the agent returns
 
 The exact hook coverage per agent is listed in each plugin's README.
 
 ## Quick Start
-
 
 ### Claude Code
 
@@ -50,6 +49,18 @@ The Cursor plugin follows [Cursor's plugin spec](https://cursor.com/docs/plugins
 progress; installation details live in the plugin README.
 
 → [Full Cursor setup and configuration](cursor-guardrails/README.md)
+
+### Codex
+
+Add the marketplace from the CLI:
+
+```bash
+codex plugin marketplace add Noma-Security/noma-marketplace
+```
+
+Restart the ChatGPT desktop app, install `guardrails` from the Noma marketplace, then review and trust its hooks with `/hooks` in Codex. Codex can apply a validated mask before a tool runs; prompt, post-tool, and response (`Stop`) mask verdicts block because those events cannot replace content. For `Stop`, blocking asks Codex to continue with the detection reason; it cannot retract an already-produced response.
+
+→ [Full Codex setup, configuration, and troubleshooting](codex-guardrails/README.md)
 
 ## Configuration
 
