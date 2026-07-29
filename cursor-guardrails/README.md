@@ -107,13 +107,9 @@ With no key the hook sends nothing and stays silent (fail-open). Set `NOMA_DEBUG
 2. Open the Noma Console → Runtime Protection → Inferences
 3. Filter by `Application ID -> Cursor` to see real-time allow/block events
 
-## Beta status
-
-> **Note**: Noma Guardrails for Cursor is currently in **Beta**. Beta status means Noma is actively researching, iterating, and developing this feature. Based on feedback, market innovation, and technical and commercial viability, Noma may decide to suspend further work on this feature. To gain early access to a beta feature initiative, contact your Noma Technical Account Manager.
-
 ## Support
 
-For support and access to beta features, contact your Noma Technical Account Manager.
+For support, contact your Noma Technical Account Manager.
 
 ## About Noma Security
 
