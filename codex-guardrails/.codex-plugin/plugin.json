@@ -3,5 +3,17 @@
   "description": "Noma AIDR guardrails for Codex (macOS, Linux, Windows)",
   "version": "2.0.3",
   "author": { "name": "Noma Security" },
-  "hooks": "./hooks/codex-hooks.json"
+  "hooks": "./hooks/codex-hooks.json",
+  "interface": {
+    "displayName": "Noma Guardrails",
+    "shortDescription": "Runtime protection for Codex",
+    "longDescription": "Protects Codex prompts, tool calls, tool responses, and final responses with Noma AIDR policy evaluation and enforcement.",
+    "developerName": "Noma Security",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Prompt and response scanning",
+      "Tool-use policy enforcement",
+      "Sensitive data masking"
+    ]
+  }
 }
