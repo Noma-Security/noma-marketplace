@@ -78,7 +78,7 @@ All plugins share the same configuration surface:
 ## Design Principles
 
 - **Fail open, degrade quietly** — a hook must never break or slow the user's session: any failure (no key, no network, bad input) exits clean without emitting a decision, leaving the agent's default behavior in place
-- **No dependencies** — Python standard library only, run via `[uv](https://docs.astral.sh/uv/)`; no `pip`, works on any Python 3
+- **No dependencies** — Python standard library only; no `pip`, works on any Python 3.6+. Claude Code and Cursor hooks run via [`uv`](https://docs.astral.sh/uv/); Codex hooks invoke a Python installation directly (the Noma-managed one when present, else the `PATH` python)
 - **Least data** — events are enriched with hostname/username only; MCP inventory ships server identity fields exclusively, with secret-looking values masked
 - **Bounded execution** — every hook, HTTP call, and credential lookup carries a timeout
 
@@ -86,7 +86,8 @@ All plugins share the same configuration surface:
 ## Prerequisites
 
 - A supported agent (see the plugin READMEs for minimum versions)
-- `[uv](https://docs.astral.sh/uv/)` on the `PATH` the agent launches hooks with (`brew install uv`, `winget install astral-sh.uv`, or your fleet's MDM)
+- Claude Code / Cursor: [`uv`](https://docs.astral.sh/uv/) on the `PATH` the agent launches hooks with (`brew install uv`, `winget install astral-sh.uv`, or your fleet's MDM)
+- Codex: a Python 3.6+ — the Noma-managed installation deployed by your fleet's MDM, or a `python3`/`python` on the `PATH` (see the Codex plugin README)
 - A Noma API key
 
 

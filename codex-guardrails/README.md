@@ -2,7 +2,7 @@
 
 Runtime protection for Codex agents: supported hook events are sent to the Noma AIDR backend for policy evaluation, and enforcement decisions are returned in Codex's native hook response format.
 
-The plugin uses a thin, standard-library-only Python adapter (`scripts/codex_hook.py`) backed by the shared Noma guardrails runtime in `scripts/common/`. It runs via [`uv`](https://docs.astral.sh/uv/) on macOS, Linux, and Windows.
+The plugin uses a thin, standard-library-only Python adapter (`scripts/codex_hook.py`) backed by the shared Noma guardrails runtime in `scripts/common/`. It runs on macOS, Linux, and Windows with the Noma-managed Python installation when present (deployed by the Noma fleet MDM script), falling back to the `python3`/`python` on the environment's `PATH`.
 
 For more details, visit [noma.security](https://noma.security).
 
@@ -22,7 +22,7 @@ Codex MCP access-control inventory is not part of this release.
 - A current Codex CLI or ChatGPT desktop release with plugin hooks
 - A Noma API key from your Noma Technical Account Manager
 - macOS, Linux, or Windows
-- [`uv`](https://docs.astral.sh/uv/) on the `PATH` of the environment that launches Codex
+- Python 3.6+ — either the Noma-managed installation (`/usr/local/noma/python` or `~/.noma/python` on macOS/Linux, `C:\Program Files\Noma\python` or `C:\ProgramData\Noma\python` on Windows; deployed by the Noma fleet MDM script) or a `python3`/`python` on the `PATH` of the environment that launches Codex
 
 ## Installation
 
@@ -89,9 +89,9 @@ cmdkey /generic:noma-guardrails /user:$env:USERNAME /pass:$key
 - Review and trust the current hook definition with `/hooks`.
 - Restart Codex after installing the plugin or changing its environment.
 
-### `uv` is not found
+### Python is not found
 
-Confirm `uv --version` works in the environment that launches Codex. Install it with `brew install uv` on macOS, `winget install astral-sh.uv` on Windows, or the supported package/install method for your Linux distribution.
+The hook silently does nothing when no usable Python exists. Confirm one of the Noma-managed installations listed under Prerequisites is present (ask your fleet admin to run the Noma MDM deploy script), or that `python3 --version` (or `python --version` on Windows) works in the environment that launches Codex.
 
 ### No inferences appear in Noma
 

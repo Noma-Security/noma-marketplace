@@ -1,7 +1,7 @@
 {
   "name": "guardrails",
   "description": "Noma AIDR guardrails for Codex (macOS, Linux, Windows)",
-  "version": "2.0.3",
+  "version": "2.1.0",
   "author": { "name": "Noma Security" },
   "hooks": "./hooks/codex-hooks.json",
   "interface": {
