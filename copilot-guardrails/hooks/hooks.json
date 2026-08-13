@@ -1,0 +1,37 @@
+{
+  "version": 1,
+  "hooks": {
+    "userPromptSubmitted": [
+      {
+        "type": "command",
+        "bash": "command -v uv >/dev/null 2>&1 || exit 0; uv run --no-project \"${PLUGIN_ROOT}/scripts/copilot_hook.py\" userPromptSubmitted || true",
+        "powershell": "if (-not (Get-Command uv -ErrorAction SilentlyContinue)) { exit 0 }; uv run --no-project \"${PLUGIN_ROOT}\\scripts\\copilot_hook.py\" userPromptSubmitted; exit 0",
+        "timeoutSec": 25
+      }
+    ],
+    "preToolUse": [
+      {
+        "type": "command",
+        "bash": "command -v uv >/dev/null 2>&1 || exit 0; uv run --no-project \"${PLUGIN_ROOT}/scripts/copilot_hook.py\" preToolUse || true",
+        "powershell": "if (-not (Get-Command uv -ErrorAction SilentlyContinue)) { exit 0 }; uv run --no-project \"${PLUGIN_ROOT}\\scripts\\copilot_hook.py\" preToolUse; exit 0",
+        "timeoutSec": 25
+      }
+    ],
+    "postToolUse": [
+      {
+        "type": "command",
+        "bash": "command -v uv >/dev/null 2>&1 || exit 0; uv run --no-project \"${PLUGIN_ROOT}/scripts/copilot_hook.py\" postToolUse || true",
+        "powershell": "if (-not (Get-Command uv -ErrorAction SilentlyContinue)) { exit 0 }; uv run --no-project \"${PLUGIN_ROOT}\\scripts\\copilot_hook.py\" postToolUse; exit 0",
+        "timeoutSec": 25
+      }
+    ],
+    "agentStop": [
+      {
+        "type": "command",
+        "bash": "command -v uv >/dev/null 2>&1 || exit 0; uv run --no-project \"${PLUGIN_ROOT}/scripts/copilot_hook.py\" agentStop || true",
+        "powershell": "if (-not (Get-Command uv -ErrorAction SilentlyContinue)) { exit 0 }; uv run --no-project \"${PLUGIN_ROOT}\\scripts\\copilot_hook.py\" agentStop; exit 0",
+        "timeoutSec": 25
+      }
+    ]
+  }
+}

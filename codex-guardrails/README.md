@@ -10,12 +10,10 @@ For more details, visit [noma.security](https://noma.security).
 
 | Event | Data collected | Enforcement |
 | --- | --- | --- |
-| `UserPromptSubmit` | User prompt | Allow or block |
+| `UserPromptSubmit` | User prompt and the MCP server inventory | Allow or block |
 | `PreToolUse` | Tool name and input | Allow, block, or apply a validated mask |
 | `PostToolUse` | Tool name, input, and response | Allow or block |
 | `Stop` | Final assistant response | Allow or request that Codex continue with the detection reason |
-
-Codex MCP access-control inventory is not part of this release.
 
 ## Prerequisites
 
@@ -23,6 +21,7 @@ Codex MCP access-control inventory is not part of this release.
 - A Noma API key from your Noma Technical Account Manager
 - macOS, Linux, or Windows
 - Python 3.6+ — either the Noma-managed installation (`/usr/local/noma/python` or `~/.noma/python` on macOS/Linux, `C:\Program Files\Noma\python` or `C:\ProgramData\Noma\python` on Windows; deployed by the Noma fleet MDM script) or a `python3`/`python` on the `PATH` of the environment that launches Codex
+- Python 3.11+ for MCP inventory; prompt, tool, and response guardrails continue to work on Python 3.6–3.10
 
 ## Installation
 

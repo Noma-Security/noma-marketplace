@@ -56,67 +56,6 @@ def _first_existing(paths):
     return None
 
 
-def _project_root(cwd):
-    r"""The directory Claude Code treats as the project root for this cwd.
-
-    Claude Code keys project config by the enclosing git repository root, not
-    the launch directory: a session started in <repo>\plugins still loads the
-    .claude.json projects entry and .mcp.json of <repo>, and never creates a
-    projects entry for the subdirectory. Looking these up under the raw cwd
-    therefore silently drops every project-scoped server when the session
-    starts below the root. Walk up from cwd to the first directory holding a
-    .git entry (a directory normally, a file for worktrees/submodules); for a
-    linked worktree the main checkout is the root Claude Code keys by, so its
-    resolution wins (see _worktree_main_root). When no repository encloses
-    cwd, Claude Code uses cwd itself, so it is returned unchanged.
-    """
-    current = cwd
-    while isinstance(current, str) and current != "":
-        if engine.file_exists(os.path.join(current, ".git")):
-            main_root = _worktree_main_root(current)
-            return main_root if main_root else current
-        parent = os.path.dirname(current)
-        if parent == current:
-            break
-        current = parent
-    return cwd
-
-
-def _worktree_main_root(root):
-    """The main checkout enclosing a linked-worktree root, or None.
-
-    A linked worktree's .git is a file redirecting to the repository's common
-    git dir: "gitdir: <main>/.git/worktrees/<name>". Claude Code follows that
-    redirect and keys the worktree's project config by <main>, so <main> IS
-    the project root whenever it resolves. Only the worktree layout is
-    followed — a submodule's redirect points at .git/modules/<name> and stays
-    its own project — and a dangling redirect (main checkout gone) returns
-    None so the caller degrades to the worktree root itself.
-    """
-    git_entry = os.path.join(root, ".git")
-    if os.path.isdir(git_entry) or not engine.file_exists(git_entry):
-        return None
-    try:
-        with open(git_entry, "r") as f:
-            redirect = f.readline().strip()
-    except Exception as e:
-        debug.exc("worktree gitdir read " + str(git_entry), e)
-        return None
-    if not redirect.startswith("gitdir:"):
-        return None
-    git_dir = redirect[len("gitdir:"):].strip()
-    if git_dir == "":
-        return None
-    if not os.path.isabs(git_dir):
-        git_dir = os.path.normpath(os.path.join(root, git_dir))
-    worktrees_dir = os.path.dirname(git_dir)
-    if os.path.basename(worktrees_dir) != "worktrees":
-        return None
-    if not engine.file_exists(git_dir):
-        return None
-    return os.path.dirname(os.path.dirname(worktrees_dir))
-
-
 def _same_path(left, right):
     r"""True when two spellings name the same directory.
 
@@ -234,7 +173,7 @@ def discover_claude_code(home, cwd):
     One candidate per known config location; the engine later drops any whose
     server map is empty. Project-scoped lookups use the enclosing git root,
     not the raw cwd — for a linked worktree, the main checkout's root
-    (see _project_root). Sources by scope:
+    Sources by scope:
       user / local : ~/.claude.json          (servers only; also holds secrets)
       user         : ~/.claude/mcp.json
       project      : <project root>/.mcp.json
@@ -242,7 +181,7 @@ def discover_claude_code(home, cwd):
       managed      : enterprise managed-mcp.json / managed-settings.json
       remote       : server-pushed ~/.claude/remote-settings.json
     """
-    root = _project_root(cwd)
+    root = engine.git_repository_root(cwd) or cwd
     if root != cwd:
         debug.log("discovery: project root " + str(root) + " (cwd " + str(cwd) + ")")
 

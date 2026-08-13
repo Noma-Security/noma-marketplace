@@ -1,12 +1,12 @@
 """Generic MCP server-config allowlisting shared by the agent plugins.
 
 Every agent this marketplace supports stores MCP servers as a {name: config}
-map under an `mcpServers` (or `servers`) wrapper key. This module pulls out
-that map and reduces each server to a type/url/command/args allowlist with
-secret-looking values masked, so any identifier a backend derives from the
-output is clean by construction; env, headers and everything else never leave
-the machine. Agent-specific config shapes (e.g. Claude Code's plugin manifest
-and bare-map plugin .mcp.json) stay with their plugin.
+map under an `mcpServers`, `mcp_servers`, or `servers` wrapper key. This module
+pulls out that map and reduces each server to a type/url/command/args/enabled
+allowlist with secret-looking values masked, so any identifier a backend derives
+from the output is clean by construction; env, headers and everything else never
+leave the machine. Agent-specific config shapes (e.g. Claude Code's plugin
+manifest and bare-map plugin .mcp.json) stay with their plugin.
 
 `build_server_content(doc)` runs the full pipeline: extract -> clean -> wrap.
 """
@@ -21,12 +21,12 @@ from .redaction import sanitize_args, sanitize_str
 MCP_FILENAMES = ("mcp.json", ".mcp.json")
 
 # Wrapper keys a server map lives under, in precedence order (mcpServers wins).
-MCP_WRAPPER_KEYS = ("mcpServers", "servers")
+MCP_WRAPPER_KEYS = ("mcpServers", "mcp_servers", "servers")
 
 
 def _extract_servers(doc, allow_bare=False):
     """The {name: config} server map from a config doc: the `mcpServers` key,
-    else `servers`, else {}.
+    else `mcp_servers`, else `servers`, else {}.
 
     Keying off an explicit wrapper matters most for files whose top level also
     holds unrelated, sensitive state: a secret there can never be mistaken for a
@@ -64,10 +64,13 @@ def _as_arg_string(value):
 def _clean_server(cfg):
     """Reduce one server config to the allowlisted identity fields.
 
-    Keeps only type/url/command/args; url and command are secret-sanitized, args
-    are sanitized then stringified. Everything else (env, headers, ...) is dropped.
+    Keeps only type/url/command/args/enabled; url, command, and scalar args are
+    sanitized. Structured args reject the server. Everything else is dropped.
     """
     if not is_object(cfg):
+        return {}
+    if isinstance(cfg.get("args"), list) and any(
+            isinstance(value, (dict, list)) for value in cfg["args"]):
         return {}
     out = {}
     if isinstance(cfg.get("type"), str):
@@ -78,6 +81,8 @@ def _clean_server(cfg):
         out["command"] = sanitize_str(cfg["command"])
     if isinstance(cfg.get("args"), list):
         out["args"] = [_as_arg_string(v) for v in sanitize_args(cfg["args"])]
+    if isinstance(cfg.get("enabled"), bool):
+        out["enabled"] = cfg["enabled"]
     return out
 
 
@@ -152,8 +157,8 @@ def _declared_field(manifest):
 
 
 def _declared_mcp_candidates(scope, kind, base_dir, manifest_path, manifest):
-    """Candidates from a manifest's mcpServers/servers field (mcpServers wins):
-    an inline map, a path (resolved against base_dir), or an array of either.
+    """Candidates from a manifest's MCP wrapper field (mcpServers wins): an
+    inline map, a path (resolved against base_dir), or an array of either.
 
     An inline map is emitted merged with the manifest's other fields, so the
     plugin's metadata (name/version/...) travels with its servers; a path/file
@@ -189,8 +194,8 @@ def _declared_mcp_candidates(scope, kind, base_dir, manifest_path, manifest):
 
 
 def marketplace_candidates(scope, kind, marketplace_root, manifest_dir):
-    """Candidates from a marketplace manifest's plugins[] mcpServers/servers
-    entries, emitted under (scope, kind). manifest_dir is the subdirectory holding
+    """Candidates from a marketplace manifest's plugins[] MCP wrapper entries,
+    emitted under (scope, kind). manifest_dir is the subdirectory holding
     marketplace.json under marketplace_root (e.g. ".cursor-plugin"). The tree
     walk that finds marketplace_root is the caller's (agent-specific) concern.
     """
@@ -207,10 +212,10 @@ def marketplace_candidates(scope, kind, marketplace_root, manifest_dir):
 
 
 def plugin_candidates(scope, plugin_kind, mcp_kind, plugin_dir, manifest_dir):
-    """Candidates from one installed plugin directory: the manifest's
-    mcpServers/servers field (emitted as plugin_kind), then folder-discovered mcp
-    files (emitted as mcp_kind), all under scope. manifest_dir is the subdirectory holding
-    plugin.json under plugin_dir (e.g. ".cursor-plugin").
+    """Candidates from one installed plugin directory: the manifest's MCP wrapper
+    field (emitted as plugin_kind), then folder-discovered mcp files (emitted as
+    mcp_kind), all under scope. manifest_dir is the subdirectory holding plugin.json
+    under plugin_dir (e.g. ".cursor-plugin").
     """
     manifest_path = os.path.join(plugin_dir, manifest_dir, "plugin.json")
     manifest = read_json(manifest_path) if file_exists(manifest_path) else None

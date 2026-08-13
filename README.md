@@ -18,6 +18,7 @@ Windows.
 | `guardrails` | [Claude Code](https://claude.com/claude-code) | [guardrails/README.md](guardrails/README.md)                     |
 | `guardrails` | [Codex](https://openai.com/codex/)            | [codex-guardrails/README.md](codex-guardrails/README.md)         |
 | `guardrails` | [Cursor](https://cursor.com)                  | [cursor-guardrails/README.md](cursor-guardrails/README.md)       |
+| `guardrails` | [GitHub Copilot](https://github.com/features/copilot) | [copilot-guardrails/README.md](copilot-guardrails/README.md) |
 
 
 ## What We Protect
@@ -25,7 +26,6 @@ Windows.
 - **User prompts** — scan for sensitive data (PCI, PII, PHI) before it leaves your machine
 - **Shell execution** — evaluate terminal commands before they run
 - **MCP tool execution** — govern Model Context Protocol interactions and unauthorized tool use
-- **MCP server inventory** — report the agent's configured MCP servers per scope for organization-level access control (identity fields only, secrets masked; Codex MCP access control is not part of this release)
 - **File reads and edits** — protect sensitive local data (`.env` files, SSH keys) from being indexed or exfiltrated
 - **Agent responses** — track what the agent returns
 
@@ -62,6 +62,19 @@ Restart the ChatGPT desktop app, install `guardrails` from the Noma marketplace,
 
 → [Full Codex setup, configuration, and troubleshooting](codex-guardrails/README.md)
 
+### GitHub Copilot
+
+Add the marketplace from the Copilot CLI:
+
+```bash
+copilot plugin marketplace add Noma-Security/noma-marketplace
+copilot plugin install guardrails@noma
+```
+
+Copilot can block or mask prompts and tool calls, and mask tool results; a threat on a tool result replaces it with a block notice because the event has no deny channel. Response (`agentStop`) verdicts block by asking Copilot to continue with the detection reason. Prompt enforcement requires Copilot CLI ≥ 1.0.78.
+
+→ [Full GitHub Copilot setup, configuration, and troubleshooting](copilot-guardrails/README.md)
+
 ## Configuration
 
 All plugins share the same configuration surface:
@@ -78,8 +91,8 @@ All plugins share the same configuration surface:
 ## Design Principles
 
 - **Fail open, degrade quietly** — a hook must never break or slow the user's session: any failure (no key, no network, bad input) exits clean without emitting a decision, leaving the agent's default behavior in place
-- **No dependencies** — Python standard library only; no `pip`, works on any Python 3.6+. Claude Code and Cursor hooks run via [`uv`](https://docs.astral.sh/uv/); Codex hooks invoke a Python installation directly (the Noma-managed one when present, else the `PATH` python)
-- **Least data** — events are enriched with hostname/username only; MCP inventory ships server identity fields exclusively, with secret-looking values masked
+- **No dependencies** — Python standard library only; no `pip`. Core hooks work on Python 3.6+. Claude Code and Cursor hooks run via [`uv`](https://docs.astral.sh/uv/); Codex hooks invoke a Python installation directly (the Noma-managed one when present, else the `PATH` python)
+- **Least data** — only fields required for policy evaluation leave the machine, with secret-looking values masked
 - **Bounded execution** — every hook, HTTP call, and credential lookup carries a timeout
 
 

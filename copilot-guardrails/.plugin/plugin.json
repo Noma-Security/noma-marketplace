@@ -1,0 +1,7 @@
+{
+  "name": "guardrails",
+  "description": "Noma AIDR guardrails for GitHub Copilot",
+  "version": "1.0.1",
+  "author": { "name": "Noma Security" },
+  "hooks": "./hooks/hooks.json"
+}

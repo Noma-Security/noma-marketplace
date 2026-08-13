@@ -22,13 +22,16 @@ def is_object(v):
 # --- filesystem / stdio (every failure degrades to None/"") ------------------
 
 
-def read_json(path):
-    """Parse a JSON file, or None on any read/decode/parse failure."""
+def read_json(path, max_bytes=None):
+    """Parse bounded JSON, or None on any size/read/decode/parse failure."""
     try:
         with open(path, "rb") as f:
-            raw = f.read()
+            raw = f.read(max_bytes + 1) if max_bytes is not None else f.read()
     except Exception as e:
         debug.exc("read_json open/read " + str(path), e)
+        return None
+    if max_bytes is not None and len(raw) > max_bytes:
+        debug.log("read_json too large " + str(path))
         return None
     try:
         obj = json.loads(raw.decode("utf-8"))
@@ -55,6 +58,44 @@ def canonical_path(path, path_mod=os.path):
     path_mod defaults to os.path; pass ntpath to force Windows semantics (tests).
     """
     return path_mod.normcase(path_mod.normpath(path))
+
+
+def git_repository_root(cwd):
+    """Nearest Git root, resolving valid linked worktrees to the main checkout."""
+    current = cwd
+    while isinstance(current, str) and current != "":
+        git_entry = os.path.join(current, ".git")
+        if file_exists(git_entry):
+            if os.path.isdir(git_entry) or not os.path.isfile(git_entry):
+                return current
+            try:
+                with open(git_entry, "r") as handle:
+                    value = handle.read(4097)
+            except Exception as e:
+                debug.exc("gitdir read " + str(git_entry), e)
+                return current
+            if len(value) > 4096:
+                return current
+            redirect = value.strip()
+            if not redirect.startswith("gitdir:"):
+                return current
+            git_dir = redirect[len("gitdir:"):].strip()
+            if git_dir == "":
+                return current
+            if not os.path.isabs(git_dir):
+                git_dir = os.path.normpath(os.path.join(current, git_dir))
+            worktrees_dir = os.path.dirname(git_dir)
+            main_git_dir = os.path.dirname(worktrees_dir)
+            if os.path.basename(worktrees_dir) != "worktrees" \
+                    or os.path.basename(main_git_dir) != ".git" \
+                    or not os.path.isdir(git_dir):
+                return current
+            return os.path.dirname(main_git_dir)
+        parent = os.path.dirname(current)
+        if parent == current:
+            break
+        current = parent
+    return None
 
 
 def read_stdin():

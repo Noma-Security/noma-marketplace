@@ -1,0 +1,17 @@
+{
+  "name": "noma",
+  "owner": {
+    "name": "Noma Security"
+  },
+  "metadata": {
+    "description": "Noma Security guardrails plugins for GitHub Copilot"
+  },
+  "plugins": [
+    {
+      "name": "guardrails",
+      "source": "./copilot-guardrails",
+      "version": "1.0.1",
+      "description": "Noma AIDR guardrails for GitHub Copilot (macOS, Linux, Windows)"
+    }
+  ]
+}
