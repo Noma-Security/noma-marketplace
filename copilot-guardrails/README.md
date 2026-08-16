@@ -15,14 +15,6 @@ For more details, visit [noma.security](https://noma.security).
 | `postToolUse` | Tool name, arguments, and result | Allow or block |
 | `agentStop` | Final assistant response | Allow or flag the detection reason |
 
-- **MCP server inventory**: on every prompt, sends the machine's Copilot MCP configuration:
-  - **User scope**: `<copilot home>/mcp-config.json`, where the Copilot home is `$COPILOT_HOME` when set, else `$XDG_CONFIG_HOME/.copilot`, else `~/.copilot`.
-  - **Project scope**: `.github/mcp.json` and `.mcp.json` per directory from the repository root down to the working directory.
-  - **Plugin scope**: every plugin installed under `<copilot home>/installed-plugins/` (marketplace and `_direct` installs) — its `plugin.json` `mcpServers` declaration (inline map or config-file path), its `mcp.json`/`.mcp.json`/`.github/mcp.json`, and per-plugin `mcpServers` entries in cached `marketplace.json` manifests.
-  - **Managed scope**: nothing is collected, by design — GitHub Copilot has no local managed MCP config file. Enterprise MCP governance (the internal registry URL and the "Registry only" allowlist) is configured in GitHub org/enterprise Copilot policy and enforced server-side by the CLI itself, so every server the CLI can actually run is already covered by the scopes above.
-
-  Only server identity fields (`type`, `url`, `command`, `args`) are sent per server, with secret-looking values masked — `env`, `headers`, and all other fields never leave your machine.
-
 ## Prerequisites
 
 - GitHub Copilot CLI with plugin hooks (prompt block/mask outputs require CLI ≥ 1.0.78)
