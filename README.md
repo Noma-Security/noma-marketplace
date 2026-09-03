@@ -71,7 +71,7 @@ copilot plugin marketplace add Noma-Security/noma-marketplace
 copilot plugin install guardrails@noma
 ```
 
-Copilot can block or mask prompts and tool calls, and mask tool results; a threat on a tool result replaces it with a block notice because the event has no deny channel. Response (`agentStop`) verdicts block by asking Copilot to continue with the detection reason. Prompt enforcement requires Copilot CLI ≥ 1.0.78.
+In interactive Copilot CLI 1.0.78+, Noma can request native confirmation before a tool runs and display the policy evidence. Copilot can also block or mask prompts and tool calls, and mask tool results; a threat on a tool result replaces it with a block notice because the event has no deny channel. Response (`agentStop`) verdicts block by asking Copilot to continue with the detection reason. ASK is not supported in headless or cloud-agent sessions.
 
 → [Full GitHub Copilot setup, configuration, and troubleshooting](copilot-guardrails/README.md)
 
@@ -82,7 +82,7 @@ All plugins share the same configuration surface:
 
 | Variable       | Default                     | Description                                                                                                                             |
 | -------------- | --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
-| `NOMA_API_KEY` | —                           | API key; falls back to the OS credential store (service `noma-guardrails`: macOS Keychain, Linux libsecret, Windows Credential Manager) |
+| `NOMA_API_KEY` | —                           | API key; falls back to the Noma MDM discovery ingestion certificate (macOS/Windows MDM-provisioned fleets only; sent via the agent's `/v2/hooks` endpoint), then to the OS credential store (service `noma-guardrails`: macOS Keychain, Linux libsecret, Windows Credential Manager) |
 | `NOMA_API_URL` | `https://api.noma.security` | Noma endpoint                                                                                                                           |
 | `NOMA_DRYRUN`  | —                           | print the payload instead of sending (testing)                                                                                          |
 | `NOMA_DEBUG`   | —                           | diagnostic trace to a rotated per-user log file (never secrets)                                                                         |

@@ -11,13 +11,13 @@ For more details, visit [noma.security](https://noma.security).
 | Event | Data collected | Enforcement |
 | --- | --- | --- |
 | `userPromptSubmitted` | User prompt | Allow or block |
-| `preToolUse` | Tool name and arguments | Allow, block, or apply a validated mask |
+| `preToolUse` | Tool name and arguments | Allow, block, request interactive confirmation, or apply a validated mask |
 | `postToolUse` | Tool name, arguments, and result | Allow or block |
 | `agentStop` | Final assistant response | Allow or flag the detection reason |
 
 ## Prerequisites
 
-- GitHub Copilot CLI with plugin hooks (prompt block/mask outputs require CLI ≥ 1.0.78)
+- GitHub Copilot CLI ≥ 1.0.78 with plugin hooks
 - A Noma API key from your Noma Technical Account Manager
 - macOS, Linux, or Windows
 - [`uv`](https://docs.astral.sh/uv/) on the `PATH` of the environment that launches Copilot
@@ -46,7 +46,7 @@ Supported surface: the GitHub Copilot CLI. VS Code Copilot is not supported by t
 
 ### Operating system credential store
 
-If `NOMA_API_KEY` is not in Copilot's process environment, the hook looks it up in the current user's credential store.
+If `NOMA_API_KEY` is not in Copilot's process environment, on fleets provisioned for Noma MDM discovery the hook uses the ingestion key from the MDM-deployed certificate (macOS System keychain / Windows LocalMachine certificate store) and reports through `/github-copilot/v2/hooks` instead of `/github-copilot/v1/hooks`. With neither, it looks the key up in the current user's credential store.
 
 #### macOS
 
@@ -71,10 +71,12 @@ cmdkey /generic:noma-guardrails /user:$env:USERNAME /pass:$key
 
 ## Enforcement behavior
 
+- In interactive sessions, `preToolUse` ASK opens Copilot's native confirmation prompt with the Noma violation evidence. Copilot owns the available approval choices; Noma does not record the selected choice.
 - `preToolUse` can deny a tool call or replace its arguments with backend-provided masked JSON after validating that the object shape and required command fields are preserved.
 - `userPromptSubmitted` and `postToolUse` cannot replace content, so mask verdicts are returned as blocks.
 - An `agentStop` block flags the detection reason. It cannot retract a response that Copilot has already produced.
 - Missing credentials, unavailable dependencies, malformed input, and transport failures degrade quietly without interrupting Copilot.
+- ASK is not supported in local headless sessions or Copilot cloud agent because no interactive user is available.
 
 ## GitHub Copilot coding agent (cloud)
 
@@ -99,6 +101,8 @@ The Copilot coding agent (the cloud agent that works on assigned issues and pull
 
 Repeat the entry for `preToolUse`, `postToolUse`, and `agentStop`, and provide `NOMA_API_KEY` as an actions secret exposed to the agent's environment. Note that the coding agent's firewall must allow-list the endpoint, and this path is unverified/best-effort — validate it in your environment before relying on it.
 
+Do not use an ASK-enabled Noma profile with this cloud path. GitHub treats `preToolUse` ASK as deny when no user is available.
+
 ## Verification
 
 1. Ask Copilot to perform a sensitive action, such as reading `~/.ssh/config`.
@@ -111,7 +115,7 @@ Repeat the entry for `preToolUse`, `postToolUse`, and `agentStop`, and provide `
 
 - Confirm the plugin is installed and enabled.
 - Restart Copilot after installing the plugin or changing its environment.
-- Confirm the Copilot CLI release supports plugin hooks (block/mask on prompts requires CLI ≥ 1.0.78).
+- Confirm the Copilot CLI release is 1.0.78 or newer.
 
 ### `uv` is not found
 

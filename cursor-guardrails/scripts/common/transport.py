@@ -12,12 +12,13 @@ import urllib.request
 from . import debug
 
 
-def post(payload_str, api_key, api_url, hooks_path):
+def post(payload_str, api_key, api_url, hooks_path, scheme="Bearer"):
     """POST the payload to api_url + hooks_path; print the response.
 
     Retries once on a transient failure. With NOMA_DRYRUN set, print the payload
     instead of sending it (no network). Always returns 0: a failed send is
-    swallowed so a backend outage never surfaces as a hook error (degrade quietly)."""
+    swallowed so a backend outage never surfaces as a hook error (degrade quietly).
+    scheme="" sends the credential bare in x-noma-key (v2 ingestion key)."""
     url = api_url.rstrip("/") + hooks_path
     if os.environ.get("NOMA_DRYRUN"):
         debug.log("DRY-RUN would POST to " + url + " (" + str(len(payload_str)) + " bytes)")
@@ -28,7 +29,7 @@ def post(payload_str, api_key, api_url, hooks_path):
         url,
         data=payload_str.encode("utf-8"),
         headers={"Content-Type": "application/json",
-                 "x-noma-key": "Bearer " + api_key},
+                 "x-noma-key": (scheme + " " + api_key) if scheme else api_key},
         method="POST",
     )
     debug.log("POST " + str(len(payload_str)) + " bytes to " + url)

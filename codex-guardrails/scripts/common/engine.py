@@ -100,7 +100,7 @@ def git_repository_root(cwd):
 
 def read_stdin():
     try:
-        return sys.stdin.buffer.read().decode("utf-8")
+        return sys.stdin.buffer.read().decode("utf-8-sig")
     except Exception as e:
         debug.exc("read_stdin", e)
         return ""

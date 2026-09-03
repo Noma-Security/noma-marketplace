@@ -34,6 +34,7 @@ from cursor_mcp_discovery import discover_cursor
 # one stored key serves both.
 KEYCHAIN_SERVICE = "noma-guardrails"
 HOOKS_PATH = "/cursor/v1/hooks"
+HOOKS_PATH_V2 = "/cursor/v2/hooks"
 NOMA_API_URL = os.environ.get("NOMA_API_URL") or "https://api.noma.security"
 DEBUG_LOG_FILENAME = "cursor-guardrails-debug.log"
 
@@ -58,7 +59,7 @@ def main():
     # Brand the shared debug module's log file for this plugin (in main, not at
     # import, so importing this module has no side effects).
     debug.set_log_filename(DEBUG_LOG_FILENAME)
-    api_key = credentials.resolve_api_key(KEYCHAIN_SERVICE)
+    api_key, key_scope = credentials.resolve_api_key(KEYCHAIN_SERVICE)
     if not api_key:
         # Degrade quietly: with no key there's nothing to send, and a hook must
         # never surface an error in the user's session. Do nothing, exit clean.
@@ -97,6 +98,8 @@ def main():
 
     # The response body is Cursor's decision for this event; transport prints
     # it verbatim, or nothing when the POST fails (Cursor's defaults apply).
+    if key_scope == credentials.KeyScope.DATA_COLLECTOR_KEY:
+        return transport.post(payload_str, api_key, NOMA_API_URL, HOOKS_PATH_V2, scheme="")
     return transport.post(payload_str, api_key, NOMA_API_URL, HOOKS_PATH)
 
 

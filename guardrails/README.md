@@ -16,9 +16,13 @@ With coding-agent hooks enabled, Noma acts as a security gatekeeper for the foll
 - **File reads**: Protects sensitive local data (e.g., `.env` files, SSH keys) from being indexed or sent to the LLM
 - **User prompt submission**: Scans and filters sensitive data, PCI, PII, PHI before it leaves your local environment
 
+### ASK Confirmation
+
+In interactive Claude Code sessions, an ASK policy on `PreToolUse` displays Noma's violation evidence in Claude Code's native confirmation prompt. The plugin does not provide a confirmation UI for plain non-interactive `claude -p` sessions. Claude Code owns the exact approve/reject UI; Noma does not record the selected response. ASK on other hook events remains observational because those events cannot pause a tool before execution.
+
 ## Prerequisites
 
-- **Claude Code v2.0.12+**: Ensure you are running a supported version of the CLI
+- **Claude Code v2.0.12+**: ASK is best-effort before v2.1.211; reliable ASK prompting in auto mode requires v2.1.211+
 - **Noma API Key**: Request an API Key for this plugin from your Noma Technical Account manager (Note: This is not an API Key that you create within the Noma Console)
 - **Supported OS**: macOS, Linux, or Windows — one plugin, identical behavior on all three
 - **[`uv`](https://docs.astral.sh/uv/)**: the hooks run via `uv` (Astral's Python runner), which supplies the Python the hook needs — no system `python3` or `pip` packages required. `uv` must be on the `PATH` of the environment that launches the hooks
@@ -155,7 +159,8 @@ The hook scripts look up the key in this order — first match wins:
 
 1. Environment variable `NOMA_API_KEY`
 2. `~/.claude/settings.json` (`env.NOMA_API_KEY`)
-3. OS credential store (macOS Keychain / Linux libsecret): entry with service `noma-guardrails`
+3. Noma MDM discovery ingestion certificate (macOS System keychain / Windows LocalMachine certificate store) — on fleets provisioned for Noma MDM discovery, the hook reuses that credential and reports through `/claude/v2/hooks` instead of `/claude/v1/hooks`
+4. OS credential store (macOS Keychain / Linux libsecret): entry with service `noma-guardrails`
 
 If none are configured, the hook silently sends nothing — by design it never interrupts your Claude Code session. Configure a key using one of the methods in the [Configuration](#configuration) section above. To confirm key resolution, set `NOMA_DEBUG=1` and check `~/.noma/claude-code-guardrails-debug.log`.
 

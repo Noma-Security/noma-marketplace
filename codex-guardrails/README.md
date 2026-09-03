@@ -18,7 +18,7 @@ For more details, visit [noma.security](https://noma.security).
 ## Prerequisites
 
 - A current Codex CLI or ChatGPT desktop release with plugin hooks
-- A Noma API key from your Noma Technical Account Manager
+- A Noma credential: an API key from your Noma Technical Account Manager, or — on macOS/Windows fleets provisioned for Noma MDM discovery — the MDM-deployed ingestion certificate already on the machine (no separate key needed)
 - macOS, Linux, or Windows
 - Python 3.6+ — either the Noma-managed installation (`/usr/local/noma/python` or `~/.noma/python` on macOS/Linux, `C:\Program Files\Noma\python` or `C:\ProgramData\Noma\python` on Windows; deployed by the Noma fleet MDM script) or a `python3`/`python` on the `PATH` of the environment that launches Codex
 - Python 3.11+ for MCP inventory; prompt, tool, and response guardrails continue to work on Python 3.6–3.10
@@ -38,13 +38,13 @@ Restart the ChatGPT desktop app, install `guardrails` from the Noma marketplace,
 | Variable | Default | Description |
 | --- | --- | --- |
 | `NOMA_API_KEY` | — | API key; falls back to the OS credential store under `noma-guardrails` |
-| `NOMA_API_URL` | `https://api.noma.security` | Noma endpoint; events are posted to `<url>/codex/v1/hooks` |
+| `NOMA_API_URL` | `https://api.noma.security` | Noma endpoint; events are posted to `<url>/codex/v1/hooks` with an API key, or `<url>/codex/v2/hooks` with the MDM ingestion certificate |
 | `NOMA_DRYRUN` | — | Print the payload instead of sending it |
 | `NOMA_DEBUG` | — | Write diagnostics to `~/.noma/codex-guardrails-debug.log` |
 
 ### Operating system credential store
 
-If `NOMA_API_KEY` is not in Codex's process environment, the hook looks it up in the current user's credential store.
+If `NOMA_API_KEY` is not in Codex's process environment, on fleets provisioned for Noma MDM discovery the hook uses the ingestion key from the MDM-deployed certificate (macOS System keychain / Windows LocalMachine certificate store) and reports through `/codex/v2/hooks` instead of `/codex/v1/hooks`. With neither, it looks the key up in the current user's credential store.
 
 #### macOS
 
@@ -72,6 +72,7 @@ cmdkey /generic:noma-guardrails /user:$env:USERNAME /pass:$key
 - `PreToolUse` can deny a tool call or replace its input with backend-provided masked JSON after validating that the object shape and required command fields are preserved.
 - `UserPromptSubmit` and `PostToolUse` cannot replace content, so mask verdicts are returned as blocks.
 - A `Stop` block asks Codex to continue with the detection reason. It cannot retract a response that Codex has already produced.
+- ASK verdicts are non-blocking because Codex does not support hook ASK. Noma returns no decision, so Codex's normal permission handling remains active; no confirmation or answer is recorded.
 - Missing credentials, unavailable dependencies, malformed input, and transport failures degrade quietly without interrupting Codex.
 
 ## Verification

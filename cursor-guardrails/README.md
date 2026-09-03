@@ -15,10 +15,12 @@ For more details, visit [noma.security](https://noma.security).
 - **MCP server inventory**: on every prompt, sends the machine's Cursor MCP configuration (user, workspace, plugin, and marketplace scopes — mcp.json files plus plugin/marketplace manifest declarations). Only server identity fields (`type`, `url`, `command`, `args`) are sent per server, with secret-looking values masked — `env`, `headers`, and all other fields never leave your machine
 - **Everything else the agent does**: other tool calls are gated via Cursor's generic pre-tool-use hook, and post-action telemetry (tool outputs, file edits, assistant responses) streams to Noma for detection and visibility
 
+ASK verdicts are non-blocking because Cursor does not reliably enforce hook ASK. Noma returns the existing allow response; no confirmation or answer is recorded. BLOCK verdicts remain enforced.
+
 ## Prerequisites
 
 - Cursor with plugin support
-- **Noma API Key**: request one for this plugin from your Noma Technical Account Manager (this is not an API Key you create within the Noma Console)
+- **Noma credential**: an API Key requested for this plugin from your Noma Technical Account Manager (not an API Key you create within the Noma Console), or — on macOS/Windows fleets provisioned for Noma MDM discovery — the MDM-deployed ingestion certificate already on the machine (no separate key needed)
 - **Supported OS**: macOS, Linux, or Windows — one plugin, identical behavior on all three
 - [`uv`](https://docs.astral.sh/uv/) on the `PATH` Cursor launches hooks with — `uv` supplies the Python the hook needs; no system `python3` or `pip` packages required
 
@@ -27,7 +29,7 @@ For more details, visit [noma.security](https://noma.security).
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `NOMA_API_KEY` | — | API key; falls back to the OS credential store (service `noma-guardrails`: macOS Keychain, Linux libsecret, Windows Credential Manager) |
-| `NOMA_API_URL` | `https://api.noma.security` | Noma endpoint; events POST to `<url>/cursor/v1/hooks` |
+| `NOMA_API_URL` | `https://api.noma.security` | Noma endpoint; events POST to `<url>/cursor/v1/hooks` with an API key, or `<url>/cursor/v2/hooks` with the MDM ingestion certificate |
 | `NOMA_DRYRUN` | — | print the payload instead of sending (testing) |
 | `NOMA_DEBUG` | — | trace to `~/.noma/cursor-guardrails-debug.log` (diagnostics only, never secrets) |
 
@@ -82,7 +84,8 @@ The hooks run via `uv run`. If hook executions fail to start:
 The hook resolves the key in this order — first match wins:
 
 1. Environment variable `NOMA_API_KEY` (in Cursor's process environment)
-2. OS credential store entry `noma-guardrails` (see Configuration above)
+2. Noma MDM discovery ingestion certificate (macOS System keychain / Windows LocalMachine certificate store) — on fleets provisioned for Noma MDM discovery, the hook reuses that credential and reports through `/cursor/v2/hooks` instead of `/cursor/v1/hooks`
+3. OS credential store entry `noma-guardrails` (see Configuration above)
 
 With no key the hook sends nothing and stays silent (fail-open). Set `NOMA_DEBUG=1` and check `~/.noma/cursor-guardrails-debug.log` to see which lookup steps ran.
 

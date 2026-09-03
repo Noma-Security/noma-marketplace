@@ -1,20 +1,39 @@
-"""API-key resolution from the environment or the OS credential store.
+"""API-key resolution from the environment, the MDM certificate, or the OS
+credential store.
 
 ``resolve_api_key(service)`` prefers the NOMA_API_KEY environment variable, then
-falls back to the per-user credential store: macOS Keychain (``security``), Linux
-libsecret / GNOME Keyring (``secret-tool``), or Windows Credential Manager
-(``advapi32.CredReadW``). The store is keyed by the caller-supplied ``service``
-name (the guardrails hook passes "noma-guardrails".
+the MDM discovery ingestion certificate, then the per-user credential store:
+macOS Keychain (``security``), Linux libsecret / GNOME Keyring (``secret-tool``),
+or Windows Credential Manager (``advapi32.CredReadW``). The store is keyed by the
+caller-supplied ``service`` name (the guardrails hook passes "noma-guardrails").
+It returns ``(key, KeyScope)`` so callers can tell which source won.
 
 OS-portable, stdlib only, no f-strings/annotations - runs on any python3.
 """
 
+import enum
 import getpass
 import os
 import subprocess
 import sys
 
 from . import debug
+
+
+class KeyScope(enum.Enum):
+    """Which source resolved the transport credential."""
+    NONE = "none"
+    ENV = "env"
+    DATA_COLLECTOR_KEY = "data_collector_key"
+    ACCESS_TOKEN = "access_token"
+
+
+# MDM discovery ingestion key - base64(client_id:client_secret) in a SAN URI of
+# an MDM-deployed inert certificate; see mdm_scripts/mobileconfig.go.
+MDM_CERT_CN = "Noma MDM Ingestion Key"
+MDM_KEY_SCHEME = "x-noma-key"
+_MDM_KEY_RE_BODY = MDM_KEY_SCHEME + ":[A-Za-z0-9+/=]+"
+_MDM_KEY_RE = MDM_KEY_SCHEME + ":([A-Za-z0-9+/=]+)"
 
 
 def current_user():
@@ -26,12 +45,13 @@ def current_user():
         return os.environ.get("USER") or os.environ.get("USERNAME") or ""
 
 
-def _run(cmd):
+def _run(cmd, input_bytes=None, timeout=5):
     """Stripped stdout of cmd, or "" on any failure. stderr is discarded so a
-    missing helper never surfaces in the Claude Code UI, and a 5s timeout bounds
+    missing helper never surfaces in the Claude Code UI, and the timeout bounds
     a locked/slow credential store so the hook can't hang."""
     try:
-        out = subprocess.check_output(cmd, stderr=subprocess.DEVNULL, timeout=5)
+        out = subprocess.check_output(cmd, stderr=subprocess.DEVNULL,
+                                      timeout=timeout, input=input_bytes)
     except Exception as e:
         debug.exc("credential lookup (" + (cmd[0] if cmd else "?") + ")", e)
         return ""
@@ -117,16 +137,75 @@ def _from_store(service):
     return _unix_key(service, current_user())
 
 
+# --- MDM discovery ingestion certificate --------------------------------------
+
+_MACOS_CERT_SH = """/usr/bin/security find-certificate -c '%s' -p /Library/Keychains/System.keychain 2>/dev/null \\
+  | /usr/bin/openssl x509 -noout -text 2>/dev/null \\
+  | grep -Eo 'URI:%s' | head -n1 | sed 's#^URI:%s:##'""" % (
+    MDM_CERT_CN, _MDM_KEY_RE_BODY, MDM_KEY_SCHEME)
+
+
+def _macos_ingestion_key():
+    """The ingestion key from the MDM-deployed System-keychain cert; "" if absent."""
+    return _run(["/bin/sh", "-c", _MACOS_CERT_SH])
+
+
+_WINDOWS_CERT_PS = """$NomaIngestionKey = $null
+foreach ($nomaStoreName in @('Root', 'My')) {
+    $nomaStore = [System.Security.Cryptography.X509Certificates.X509Store]::new($nomaStoreName, [System.Security.Cryptography.X509Certificates.StoreLocation]::LocalMachine)
+    $nomaStore.Open([System.Security.Cryptography.X509Certificates.OpenFlags]::ReadOnly)
+    try {
+        foreach ($nomaCert in $nomaStore.Certificates) {
+            if ($nomaCert.GetNameInfo([System.Security.Cryptography.X509Certificates.X509NameType]::SimpleName, $false) -ne "%s") { continue }
+            $nomaSan = $nomaCert.Extensions | Where-Object { $_.Oid.Value -eq '2.5.29.17' } | Select-Object -First 1
+            if (-not $nomaSan) { continue }
+            $nomaMatch = [regex]::Match($nomaSan.Format($true), '%s')
+            if ($nomaMatch.Success) { $NomaIngestionKey = $nomaMatch.Groups[1].Value; break }
+        }
+    } finally {
+        $nomaStore.Close()
+    }
+    if ($NomaIngestionKey) { break }
+}
+if ($NomaIngestionKey) { Write-Output $NomaIngestionKey }""" % (MDM_CERT_CN, _MDM_KEY_RE)
+
+
+def _windows_ingestion_key():
+    """The ingestion key from the MDM-deployed LocalMachine cert; "" if absent."""
+    return _run(["powershell", "-NoProfile", "-NonInteractive",
+                 "-Command", _WINDOWS_CERT_PS])
+
+
+def resolve_ingestion_key():
+    """The MDM discovery ingestion key from the OS certificate store; "" if unresolved."""
+    plat = sys.platform  # via a local so static analysis doesn't prune branches
+    if plat == "win32":
+        key = _windows_ingestion_key()
+    elif plat == "darwin":
+        key = _macos_ingestion_key()
+    else:
+        debug.log("no MDM ingestion certificate source on platform=" + plat)
+        return ""
+    debug.log("MDM ingestion certificate " +
+              ("returned a key" if key else "returned nothing"))
+    return key
+
+
 def resolve_api_key(service):
-    """env NOMA_API_KEY first, then the OS credential store; "" if unresolved.
+    """(key, key_scope): NOMA_API_KEY env wins, then the MDM ingestion key,
+    then the OS credential store; ("", KeyScope.NONE) when nothing resolves.
 
     `service` is the credential-store key, supplied by the caller so this module
     stays generic (the guardrails hook passes "noma-guardrails")."""
     key = os.environ.get("NOMA_API_KEY")
     if key:
         debug.log("API key resolved from NOMA_API_KEY env/settings")
-        return key
-    debug.log("NOMA_API_KEY not in env/settings; falling back to OS credential store")
+        return key, KeyScope.ENV
+    key = resolve_ingestion_key()
+    if key:
+        return key, KeyScope.DATA_COLLECTOR_KEY
     key = _from_store(service)
     debug.log("credential store " + ("returned a key" if key else "returned nothing"))
-    return key
+    if key:
+        return key, KeyScope.ACCESS_TOKEN
+    return "", KeyScope.NONE
