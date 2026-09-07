@@ -46,20 +46,33 @@ def current_user():
 
 
 def _run(cmd, input_bytes=None, timeout=5):
-    """Stripped stdout of cmd, or "" on any failure. stderr is discarded so a
-    missing helper never surfaces in the Claude Code UI, and the timeout bounds
-    a locked/slow credential store so the hook can't hang."""
+    """Stripped stdout of cmd, or "" on any failure. stderr never reaches the
+    agent UI: it is captured and forwarded to the debug trace so a helper's own
+    diagnostics survive, and the timeout bounds a locked/slow credential store so
+    the hook can't hang."""
+    label = cmd[0] if cmd else "?"
+    if input_bytes is None:
+        stdin = {"stdin": subprocess.DEVNULL}
+    else:
+        stdin = {"input": input_bytes}
     try:
-        out = subprocess.check_output(cmd, stderr=subprocess.DEVNULL,
-                                      timeout=timeout, input=input_bytes)
+        completed = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                   timeout=timeout, check=True, **stdin)
     except Exception as e:
-        debug.exc("credential lookup (" + (cmd[0] if cmd else "?") + ")", e)
+        debug.exc("credential lookup (" + label + ")", e)
+        _log_stderr(label, getattr(e, "stderr", None))
         return ""
+    _log_stderr(label, completed.stderr)
     try:
-        return out.decode("utf-8").strip()
+        return completed.stdout.decode("utf-8").strip()
     except Exception as e:
         debug.exc("credential decode", e)
         return ""
+
+
+def _log_stderr(label, raw):
+    if raw:
+        debug.log("credential lookup stderr (" + label + "): " + raw.decode("utf-8", "replace").strip())
 
 
 # --- mac/Linux: subprocess against the platform secret helper ----------------
@@ -139,21 +152,31 @@ def _from_store(service):
 
 # --- MDM discovery ingestion certificate --------------------------------------
 
-_MACOS_CERT_SH = """/usr/bin/security find-certificate -c '%s' -p /Library/Keychains/System.keychain 2>/dev/null \\
-  | /usr/bin/openssl x509 -noout -text 2>/dev/null \\
-  | grep -Eo 'URI:%s' | head -n1 | sed 's#^URI:%s:##'""" % (
+_MACOS_CERT_SH = """noma_cert_key() {
+  [ -f "$1" ] || return 0
+  /usr/bin/security find-certificate -c '%s' -p "$1" 2>/dev/null \\
+    | /usr/bin/openssl x509 -noout -text 2>/dev/null \\
+    | grep -Eo 'URI:%s' | head -n1 | sed 's#^URI:%s:##'
+}
+noma_key=$(noma_cert_key /Library/Keychains/System.keychain)
+if [ -z "$noma_key" ]; then
+  noma_key=$(noma_cert_key "${HOME:-/var/root}/Library/Keychains/login.keychain-db")
+fi
+printf '%%s' "$noma_key\"""" % (
     MDM_CERT_CN, _MDM_KEY_RE_BODY, MDM_KEY_SCHEME)
 
 
 def _macos_ingestion_key():
-    """The ingestion key from the MDM-deployed System-keychain cert; "" if absent."""
+    """The ingestion key from the deployed keychain cert (System, then login); "" if absent."""
     return _run(["/bin/sh", "-c", _MACOS_CERT_SH])
 
 
 _WINDOWS_CERT_PS = """$NomaIngestionKey = $null
+foreach ($nomaLocation in @('LocalMachine', 'CurrentUser')) {
 foreach ($nomaStoreName in @('Root', 'My')) {
-    $nomaStore = [System.Security.Cryptography.X509Certificates.X509Store]::new($nomaStoreName, [System.Security.Cryptography.X509Certificates.StoreLocation]::LocalMachine)
-    $nomaStore.Open([System.Security.Cryptography.X509Certificates.OpenFlags]::ReadOnly)
+    $nomaStore = [System.Security.Cryptography.X509Certificates.X509Store]::new($nomaStoreName, [System.Security.Cryptography.X509Certificates.StoreLocation]::$nomaLocation)
+    try { $nomaStore.Open([System.Security.Cryptography.X509Certificates.OpenFlags]::ReadOnly) }
+    catch { [Console]::Error.WriteLine("cert store $nomaLocation\\$nomaStoreName not opened: $($_.Exception.Message)"); continue }
     try {
         foreach ($nomaCert in $nomaStore.Certificates) {
             if ($nomaCert.GetNameInfo([System.Security.Cryptography.X509Certificates.X509NameType]::SimpleName, $false) -ne "%s") { continue }
@@ -167,11 +190,13 @@ foreach ($nomaStoreName in @('Root', 'My')) {
     }
     if ($NomaIngestionKey) { break }
 }
+if ($NomaIngestionKey) { break }
+}
 if ($NomaIngestionKey) { Write-Output $NomaIngestionKey }""" % (MDM_CERT_CN, _MDM_KEY_RE)
 
 
 def _windows_ingestion_key():
-    """The ingestion key from the MDM-deployed LocalMachine cert; "" if absent."""
+    """The ingestion key from the deployed cert (LocalMachine, then CurrentUser); "" if absent."""
     return _run(["powershell", "-NoProfile", "-NonInteractive",
                  "-Command", _WINDOWS_CERT_PS])
 
