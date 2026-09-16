@@ -10,7 +10,7 @@
     {
       "name": "guardrails",
       "source": "./copilot-guardrails",
-      "version": "1.0.1",
+      "version": "1.1.0",
       "description": "Noma AIDR guardrails for GitHub Copilot (macOS, Linux, Windows)"
     }
   ]

@@ -20,6 +20,8 @@ except ImportError:
 from codex_mcp_discovery import collect_codex_artifacts
 
 KEYCHAIN_SERVICE = "noma-guardrails"
+# equals .version in .codex-plugin/plugin.json; CI enforces it
+HOOK_VERSION = "2.2.0"
 HOOKS_PATH = "/codex/v1/hooks"
 HOOKS_PATH_V2 = "/codex/v2/hooks"
 NOMA_API_URL = os.environ.get("NOMA_API_URL") or "https://api.noma.security"
@@ -60,6 +62,8 @@ def main():
     if not isinstance(event, dict):
         debug.log("stdin JSON is not an object; nothing to send")
         return 0
+
+    event["hook_version"] = HOOK_VERSION
 
     if event.get("hook_event_name") == "UserPromptSubmit":
         debug.log("event UserPromptSubmit; building MCP inventory")

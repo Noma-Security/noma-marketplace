@@ -20,9 +20,13 @@ With coding-agent hooks enabled, Noma acts as a security gatekeeper for the foll
 
 In interactive Claude Code sessions, an ASK policy on `PreToolUse` displays Noma's violation evidence in Claude Code's native confirmation prompt. The plugin does not provide a confirmation UI for plain non-interactive `claude -p` sessions. Claude Code owns the exact approve/reject UI; Noma does not record the selected response. ASK on other hook events remains observational because those events cannot pause a tool before execution.
 
+### Masking
+
+A MASK policy on `PreToolUse` replaces the tool input with Noma's anonymized version and auto-approves the call, so the tool runs with the sensitive values redacted. On `PostToolUse` it replaces the tool result Claude sees; the tool has already run, so only the model context is redacted. Masking is fail-open: a rewrite that cannot be applied safely (structure or type changes, an emptied shell command, or an unsupported Claude Code version) leaves the original content untouched while the detection is still recorded. MASK on `UserPromptSubmit` and `Stop` is observational because those events cannot replace content.
+
 ## Prerequisites
 
-- **Claude Code v2.0.12+**: ASK is best-effort before v2.1.211; reliable ASK prompting in auto mode requires v2.1.211+
+- **Claude Code v2.0.12+**: ASK is best-effort before v2.1.211; reliable ASK prompting in auto mode requires v2.1.211+. `PostToolUse` masking requires v2.1.121+ (`updatedToolOutput`); older versions ignore the rewrite
 - **Noma API Key**: Request an API Key for this plugin from your Noma Technical Account manager (Note: This is not an API Key that you create within the Noma Console)
 - **Supported OS**: macOS, Linux, or Windows — one plugin, identical behavior on all three
 - **[`uv`](https://docs.astral.sh/uv/)**: the hooks run via `uv` (Astral's Python runner), which supplies the Python the hook needs — no system `python3` or `pip` packages required. `uv` must be on the `PATH` of the environment that launches the hooks

@@ -31,6 +31,8 @@ from mcp_discovery import discover_claude_code
 # Noma-specific config, passed into the generic common/ package so it stays
 # agent-agnostic.
 KEYCHAIN_SERVICE = "noma-guardrails"
+# equals .version in .claude-plugin/plugin.json; CI enforces it
+HOOK_VERSION = "2.3.0"
 HOOKS_PATH = "/claude/v1/hooks"
 HOOKS_PATH_V2 = "/claude/v2/hooks"
 NOMA_API_URL = os.environ.get("NOMA_API_URL") or "https://api.noma.security"
@@ -78,6 +80,7 @@ def main():
         parsed = json.loads(raw)
         if isinstance(parsed, dict):
             event = parsed
+            event["hook_version"] = HOOK_VERSION
     except Exception as e:
         debug.exc("stdin JSON parse", e)
         event = None

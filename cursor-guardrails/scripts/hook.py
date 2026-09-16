@@ -33,6 +33,8 @@ from cursor_mcp_discovery import discover_cursor
 # agent-agnostic. Same credential-store service as the Claude Code plugin, so
 # one stored key serves both.
 KEYCHAIN_SERVICE = "noma-guardrails"
+# equals .version in .cursor-plugin/plugin.json; CI enforces it
+HOOK_VERSION = "1.2.0"
 HOOKS_PATH = "/cursor/v1/hooks"
 HOOKS_PATH_V2 = "/cursor/v2/hooks"
 NOMA_API_URL = os.environ.get("NOMA_API_URL") or "https://api.noma.security"
@@ -76,6 +78,7 @@ def main():
         parsed = json.loads(raw)
         if isinstance(parsed, dict):
             event = parsed
+            event["hook_version"] = HOOK_VERSION
     except Exception as e:
         debug.exc("stdin JSON parse", e)
         event = None

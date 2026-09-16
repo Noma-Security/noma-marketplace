@@ -21,6 +21,8 @@ from copilot_mcp_discovery import copilot_home, discover_copilot
 
 
 KEYCHAIN_SERVICE = "noma-guardrails"
+# equals .version in .plugin/plugin.json; CI enforces it
+HOOK_VERSION = "1.1.0"
 HOOKS_PATH = "/github-copilot/v1/hooks"
 HOOKS_PATH_V2 = "/github-copilot/v2/hooks"
 NOMA_API_URL = os.environ.get("NOMA_API_URL") or "https://api.noma.security"
@@ -126,6 +128,7 @@ def main():
         debug.log("event " + str(event.get("hookEventName")) + "; no inventory")
         payload = enrich(event)
 
+    payload["hookVersion"] = HOOK_VERSION
     version = plugin_version()
     if version:
         payload["pluginVersion"] = version
