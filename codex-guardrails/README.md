@@ -42,6 +42,8 @@ Restart the ChatGPT desktop app, install `guardrails` from the Noma marketplace,
 | `NOMA_DRYRUN` | — | Print the payload instead of sending it |
 | `NOMA_DEBUG` | — | Write diagnostics to `~/.noma/codex-guardrails-debug.log` |
 
+The reported `username` is the signed-in ChatGPT account email, read from `$CODEX_HOME/auth.json` or, when `cli_auth_credentials_store` is `keyring`/`auto` in the user or system `config.toml`, from the OS credential store entry Codex writes (Linux only; on macOS and Windows keyring mode falls through to the next source). Without a ChatGPT login it falls back to the global `git config user.email`, then to the OS username.
+
 ### Operating system credential store
 
 If `NOMA_API_KEY` is not in Codex's process environment, on fleets provisioned for Noma MDM discovery the hook uses the ingestion key from the MDM-deployed certificate (macOS System keychain / Windows LocalMachine certificate store) and reports through `/codex/v2/hooks` instead of `/codex/v1/hooks`. With neither, it looks the key up in the current user's credential store.

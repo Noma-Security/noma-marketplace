@@ -34,7 +34,7 @@ from cursor_mcp_discovery import discover_cursor
 # one stored key serves both.
 KEYCHAIN_SERVICE = "noma-guardrails"
 # equals .version in .cursor-plugin/plugin.json; CI enforces it
-HOOK_VERSION = "1.2.0"
+HOOK_VERSION = "1.2.1"
 HOOKS_PATH = "/cursor/v1/hooks"
 HOOKS_PATH_V2 = "/cursor/v2/hooks"
 NOMA_API_URL = os.environ.get("NOMA_API_URL") or "https://api.noma.security"

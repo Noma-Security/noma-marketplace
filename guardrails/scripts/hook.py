@@ -32,7 +32,7 @@ from mcp_discovery import discover_claude_code
 # agent-agnostic.
 KEYCHAIN_SERVICE = "noma-guardrails"
 # equals .version in .claude-plugin/plugin.json; CI enforces it
-HOOK_VERSION = "2.3.0"
+HOOK_VERSION = "2.3.1"
 HOOKS_PATH = "/claude/v1/hooks"
 HOOKS_PATH_V2 = "/claude/v2/hooks"
 NOMA_API_URL = os.environ.get("NOMA_API_URL") or "https://api.noma.security"

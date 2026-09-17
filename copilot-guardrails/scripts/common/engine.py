@@ -122,6 +122,21 @@ def enrich_identity(payload, username):
     return payload
 
 
+def resolve_username(sources):
+    """First non-empty identity from ordered (name, resolve) pairs, or "". A
+    resolver that raises is logged and skipped so identity never breaks a hook."""
+    for source, resolve in sources:
+        try:
+            username = resolve()
+        except Exception as e:
+            debug.exc("username lookup (" + source + ")", e)
+            continue
+        if username:
+            debug.log("username source=" + source)
+            return username
+    return ""
+
+
 # --- artifact / payload assembly ---------------------------------------------
 
 

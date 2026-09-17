@@ -13,7 +13,7 @@ For more details, visit [noma.security](https://noma.security).
 | `userPromptSubmitted` | User prompt | Allow or block |
 | `preToolUse` | Tool name and arguments | Allow, block, request interactive confirmation, or apply a validated mask |
 | `postToolUse` | Tool name, arguments, and result | Allow or block |
-| `agentStop` | Final assistant response | Allow or flag the detection reason |
+| `agentStop` | Final assistant response, read from the session transcript at the path Copilot provides in `transcriptPath` | Allow or flag the detection reason |
 
 ## Prerequisites
 
@@ -43,6 +43,8 @@ Supported surface: the GitHub Copilot CLI. VS Code Copilot is not supported by t
 | `NOMA_API_URL` | `https://api.noma.security` | Noma endpoint; events are posted to `<url>/github-copilot/v1/hooks` |
 | `NOMA_DRYRUN` | — | Print the payload instead of sending it |
 | `NOMA_DEBUG` | — | Write diagnostics to `~/.noma/copilot-guardrails-debug.log` |
+
+The reported `username` is the global `git config user.email` when set (Copilot exposes no account email), else the logged-in GitHub login from Copilot's `config.json`, else the OS username.
 
 ### Operating system credential store
 

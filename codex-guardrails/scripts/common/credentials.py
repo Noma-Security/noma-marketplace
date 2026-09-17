@@ -8,6 +8,10 @@ or Windows Credential Manager (``advapi32.CredReadW``). The store is keyed by th
 caller-supplied ``service`` name (the guardrails hook passes "noma-guardrails").
 It returns ``(key, KeyScope)`` so callers can tell which source won.
 
+Also hosts the endpoint-identity fallbacks hooks share: ``current_user()`` (OS
+login), ``git_email()`` (global git user.email) and ``read_store_entry()`` (a
+credential another client stored).
+
 OS-portable, stdlib only, no f-strings/annotations - runs on any python3.
 """
 
@@ -43,6 +47,13 @@ def current_user():
     except Exception as e:
         debug.exc("current_user", e)
         return os.environ.get("USER") or os.environ.get("USERNAME") or ""
+
+
+def git_email():
+    """The user's global git user.email, or "". Global only: a repo-local override
+    would make the same person report a different identity per checkout.
+    --default keeps an unset key at exit 0, so only a missing git is an error."""
+    return _run(["git", "config", "--global", "--default", "", "--get", "user.email"])
 
 
 def _run(cmd, input_bytes=None, timeout=5):
@@ -139,6 +150,15 @@ def _windows_key(service):
     except Exception as e:
         debug.exc("windows credential read", e)
         return ""
+
+
+def read_store_entry(service, account):
+    """The secret another keyring-style client stored under service/account, or "".
+    Windows generic credentials are keyed "<account>.<service>", the keyring crate's
+    target name; macOS and Linux key by service plus account."""
+    if sys.platform == "win32":
+        return _windows_key(account + "." + service)
+    return _unix_key(service, account)
 
 
 def _from_store(service):
