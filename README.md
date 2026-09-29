@@ -86,6 +86,7 @@ All plugins share the same configuration surface:
 | `NOMA_API_URL` | `https://api.noma.security` | Noma endpoint                                                                                                                           |
 | `NOMA_DRYRUN`  | —                           | print the payload instead of sending (testing)                                                                                          |
 | `NOMA_DEBUG`   | —                           | diagnostic trace to a rotated per-user log file (never secrets)                                                                         |
+| `NOMA_HOOKS_PATH` | agent hooks path         | replaces the hooks path of the POST; the MDM post-install probe sets `/probe/hooks/v1`                                                  |
 
 
 ## Design Principles

@@ -19,6 +19,7 @@ def post(payload_str, api_key, api_url, hooks_path, scheme="Bearer"):
     instead of sending it (no network). Always returns 0: a failed send is
     swallowed so a backend outage never surfaces as a hook error (degrade quietly).
     scheme="" sends the credential bare in x-noma-key (v2 ingestion key)."""
+    hooks_path = os.environ.get("NOMA_HOOKS_PATH") or hooks_path
     url = api_url.rstrip("/") + hooks_path
     if os.environ.get("NOMA_DRYRUN"):
         debug.log("DRY-RUN would POST to " + url + " (" + str(len(payload_str)) + " bytes)")
