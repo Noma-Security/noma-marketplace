@@ -22,7 +22,7 @@ from copilot_mcp_discovery import copilot_home, discover_copilot
 
 KEYCHAIN_SERVICE = "noma-guardrails"
 # equals .version in .plugin/plugin.json; CI enforces it
-HOOK_VERSION = "1.1.4"
+HOOK_VERSION = "1.1.5"
 HOOKS_PATH = "/github-copilot/v1/hooks"
 HOOKS_PATH_V2 = "/github-copilot/v2/hooks"
 NOMA_API_URL = os.environ.get("NOMA_API_URL") or "https://api.noma.security"

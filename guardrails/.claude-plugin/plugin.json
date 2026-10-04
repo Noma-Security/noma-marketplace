@@ -1,6 +1,6 @@
 {
   "name": "guardrails",
   "description": "Noma AIDR guardrails for Claude Code (macOS, Linux, Windows)",
-  "version": "2.3.2",
+  "version": "2.3.3",
   "author": { "name": "Noma Security" }
 }

@@ -5,15 +5,28 @@ sends nothing) when NOMA_DRYRUN is set. OS-portable, stdlib only (urllib), no
 f-strings/annotations - runs on any python3.
 """
 
+import json
 import os
 import sys
 import urllib.request
 
 from . import debug
 
+TIMEOUT_SECONDS = 10
+
+
+def _json_object_or_empty(body):
+    try:
+        if isinstance(json.loads(body), dict):
+            return body
+    except Exception as e:
+        debug.exc("response JSON parse", e)
+    return ""
+
 
 def post(payload_str, api_key, api_url, hooks_path, scheme="Bearer"):
-    """POST the payload to api_url + hooks_path; print the response.
+    """POST the payload to api_url + hooks_path; print the response if it is a
+    JSON object (an error page or a truncated body prints nothing).
 
     Retries once on a transient failure. With NOMA_DRYRUN set, print the payload
     instead of sending it (no network). Always returns 0: a failed send is
@@ -36,10 +49,10 @@ def post(payload_str, api_key, api_url, hooks_path, scheme="Bearer"):
     debug.log("POST " + str(len(payload_str)) + " bytes to " + url)
     try:
         try:
-            resp = urllib.request.urlopen(req, timeout=10)
+            resp = urllib.request.urlopen(req, timeout=TIMEOUT_SECONDS)
         except Exception as e:
             debug.exc("POST attempt 1 failed (retrying) " + url, e)
-            resp = urllib.request.urlopen(req, timeout=10)  # one retry on a transient failure
+            resp = urllib.request.urlopen(req, timeout=TIMEOUT_SECONDS)  # one retry on a transient failure
     except Exception as e:  # both attempts failed: HTTPError, URLError, timeout, ...
         debug.exc("POST failed " + url, e)
         return 0  # degrade quietly - a failed send must not error the user's session
@@ -54,6 +67,7 @@ def post(payload_str, api_key, api_url, hooks_path, scheme="Bearer"):
             resp.close()
         except Exception as e:
             debug.exc("response close", e)
-    if body:
-        sys.stdout.write(body if body.endswith("\n") else body + "\n")
+    decision = _json_object_or_empty(body) if body else ""
+    if decision:
+        sys.stdout.write(decision if decision.endswith("\n") else decision + "\n")
     return 0
