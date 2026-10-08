@@ -34,7 +34,7 @@ def read_json(path, max_bytes=None):
         debug.log("read_json too large " + str(path))
         return None
     try:
-        obj = json.loads(raw.decode("utf-8"))
+        obj = json.loads(raw.decode("utf-8-sig"))
     except Exception as e:
         debug.exc("read_json parse " + str(path), e)
         return None

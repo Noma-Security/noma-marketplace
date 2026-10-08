@@ -13,6 +13,7 @@ import urllib.request
 from . import debug
 
 TIMEOUT_SECONDS = 10
+DEFAULT_API_URL = "https://api.noma.security"
 
 
 def _json_object_or_empty(body):

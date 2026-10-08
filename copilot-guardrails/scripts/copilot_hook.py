@@ -12,21 +12,24 @@ import os
 import sys
 
 try:
-    from common import credentials, debug, engine, transport
+    from common import installed_config, credentials, debug, engine, transport
 except ImportError:
     sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-    from common import credentials, debug, engine, transport
+    from common import installed_config, credentials, debug, engine, transport
 
 from copilot_mcp_discovery import copilot_home, discover_copilot
 
 
 KEYCHAIN_SERVICE = "noma-guardrails"
 # equals .version in .plugin/plugin.json; CI enforces it
-HOOK_VERSION = "1.1.6"
+HOOK_VERSION = "1.2.0"
 HOOKS_PATH = "/github-copilot/v1/hooks"
 HOOKS_PATH_V2 = "/github-copilot/v2/hooks"
-NOMA_API_URL = os.environ.get("NOMA_API_URL") or "https://api.noma.security"
 DEBUG_LOG_FILENAME = "copilot-guardrails-debug.log"
+# Branded before the import-time config load so its debug lines land in this hook's log.
+debug.set_log_filename(DEBUG_LOG_FILENAME)
+installed_config.apply_installed_env()
+NOMA_API_URL = os.environ.get("NOMA_API_URL") or transport.DEFAULT_API_URL
 
 _PLUGIN_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -162,7 +165,6 @@ def enrich(event):
 
 
 def main():
-    debug.set_log_filename(DEBUG_LOG_FILENAME)
     api_key, key_scope = credentials.resolve_api_key(KEYCHAIN_SERVICE)
     if not api_key:
         debug.log("no API key resolved; nothing to send")

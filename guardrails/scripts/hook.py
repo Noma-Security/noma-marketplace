@@ -21,10 +21,10 @@ import os
 import sys
 
 try:
-    from common import engine, credentials, transport, debug
+    from common import installed_config, engine, credentials, transport, debug
 except ImportError:
     sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-    from common import engine, credentials, transport, debug
+    from common import installed_config, engine, credentials, transport, debug
 
 from mcp_discovery import discover_claude_code
 
@@ -32,11 +32,14 @@ from mcp_discovery import discover_claude_code
 # agent-agnostic.
 KEYCHAIN_SERVICE = "noma-guardrails"
 # equals .version in .claude-plugin/plugin.json; CI enforces it
-HOOK_VERSION = "2.3.4"
+HOOK_VERSION = "2.4.0"
 HOOKS_PATH = "/claude/v1/hooks"
 HOOKS_PATH_V2 = "/claude/v2/hooks"
-NOMA_API_URL = os.environ.get("NOMA_API_URL") or "https://api.noma.security"
 DEBUG_LOG_FILENAME = "claude-code-guardrails-debug.log"
+# Branded before the import-time config load so its debug lines land in this hook's log.
+debug.set_log_filename(DEBUG_LOG_FILENAME)
+installed_config.apply_installed_env()
+NOMA_API_URL = os.environ.get("NOMA_API_URL") or transport.DEFAULT_API_URL
 
 
 def account_email():
@@ -62,9 +65,6 @@ def enrich(payload):
 
 
 def main():
-    # Brand the shared debug module's log file for this plugin (in main, not at
-    # import, so importing this module has no side effects).
-    debug.set_log_filename(DEBUG_LOG_FILENAME)
     api_key, key_scope = credentials.resolve_api_key(KEYCHAIN_SERVICE)
     if not api_key:
         # Degrade quietly: with no key there's nothing to send, and a hook must
