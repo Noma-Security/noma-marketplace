@@ -2,7 +2,8 @@
 credential store.
 
 ``resolve_api_key(service)`` prefers the NOMA_API_KEY environment variable, then
-the MDM discovery ingestion certificate, then the per-user credential store:
+the per-endpoint token the MDM discovery script left in user scope, then the MDM
+discovery ingestion certificate, then the per-user credential store:
 macOS Keychain (``security``), Linux libsecret / GNOME Keyring (``secret-tool``),
 or Windows Credential Manager (``advapi32.CredReadW``). The store is keyed by the
 caller-supplied ``service`` name (the guardrails hook passes "noma-guardrails").
@@ -22,12 +23,14 @@ import subprocess
 import sys
 
 from . import debug
+from . import endpoint_token
 
 
 class KeyScope(enum.Enum):
     """Which source resolved the transport credential."""
     NONE = "none"
     ENV = "env"
+    ENDPOINT_TOKEN = "endpoint_token"
     DATA_COLLECTOR_KEY = "data_collector_key"
     ACCESS_TOKEN = "access_token"
 
@@ -237,8 +240,9 @@ def resolve_ingestion_key():
 
 
 def resolve_api_key(service):
-    """(key, key_scope): NOMA_API_KEY env wins, then the MDM ingestion key,
-    then the OS credential store; ("", KeyScope.NONE) when nothing resolves.
+    """(key, key_scope): NOMA_API_KEY env wins, then the per-endpoint token, then
+    the MDM ingestion key, then the OS credential store; ("", KeyScope.NONE) when
+    nothing resolves.
 
     `service` is the credential-store key, supplied by the caller so this module
     stays generic (the guardrails hook passes "noma-guardrails")."""
@@ -246,6 +250,9 @@ def resolve_api_key(service):
     if key:
         debug.log("API key resolved from NOMA_API_KEY env/settings")
         return key, KeyScope.ENV
+    key = endpoint_token.read_token()
+    if key:
+        return key, KeyScope.ENDPOINT_TOKEN
     key = resolve_ingestion_key()
     if key:
         return key, KeyScope.DATA_COLLECTOR_KEY

@@ -39,7 +39,7 @@ Supported surface: the GitHub Copilot CLI. VS Code Copilot is not supported by t
 
 | Variable | Default | Description |
 | --- | --- | --- |
-| `NOMA_API_KEY` | — | API key; falls back to the OS credential store under `noma-guardrails` |
+| `NOMA_API_KEY` | — | API key; falls back to the per-endpoint token left by the Noma MDM discovery script, then the MDM ingestion certificate, then the OS credential store under `noma-guardrails` |
 | `NOMA_API_URL` | `https://api.noma.security` | Noma endpoint; events are posted to `<url>/github-copilot/v1/hooks` |
 | `NOMA_DRYRUN` | — | Print the payload instead of sending it |
 | `NOMA_DEBUG` | — | Write diagnostics to `~/.noma/copilot-guardrails-debug.log` |
@@ -48,7 +48,7 @@ The reported `username` is the global `git config user.email` when set (Copilot 
 
 ### Operating system credential store
 
-If `NOMA_API_KEY` is not in Copilot's process environment, on fleets provisioned for Noma MDM discovery the hook uses the ingestion key from the MDM-deployed certificate (macOS System keychain / Windows LocalMachine certificate store) and reports through `/github-copilot/v2/hooks` instead of `/github-copilot/v1/hooks`. With neither, it looks the key up in the current user's credential store.
+If `NOMA_API_KEY` is not in Copilot's process environment, on fleets provisioned for Noma MDM discovery the hook first uses the per-endpoint token the discovery script left on the machine (`/Library/Application Support/Noma/endpoint-token` on macOS, `%ProgramData%\Noma\endpoint-token` on Windows — a short-lived device-bound token sent like an API key through `/github-copilot/v1/hooks`), then the ingestion key from the MDM-deployed certificate (macOS System keychain / Windows LocalMachine certificate store), reporting through `/github-copilot/v2/hooks` instead of `/github-copilot/v1/hooks`. With none of these, it looks the key up in the current user's credential store.
 
 #### macOS
 

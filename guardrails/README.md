@@ -163,8 +163,9 @@ The hook scripts look up the key in this order — first match wins:
 
 1. Environment variable `NOMA_API_KEY`
 2. `~/.claude/settings.json` (`env.NOMA_API_KEY`)
-3. Noma MDM discovery ingestion certificate (macOS System keychain / Windows LocalMachine certificate store) — on fleets provisioned for Noma MDM discovery, the hook reuses that credential and reports through `/claude/v2/hooks` instead of `/claude/v1/hooks`
-4. OS credential store (macOS Keychain / Linux libsecret): entry with service `noma-guardrails`
+3. Per-endpoint token left by the Noma MDM discovery script (`/Library/Application Support/Noma/endpoint-token` on macOS, `%ProgramData%\Noma\endpoint-token` on Windows) — a short-lived token bound to this device that the script obtains with the fleet's ingestion key; sent like an API key through `/claude/v1/hooks`
+4. Noma MDM discovery ingestion certificate (macOS System keychain / Windows LocalMachine certificate store) — on fleets provisioned for Noma MDM discovery, the hook reuses that credential and reports through `/claude/v2/hooks` instead of `/claude/v1/hooks`
+5. OS credential store (macOS Keychain / Linux libsecret): entry with service `noma-guardrails`
 
 If none are configured, the hook silently sends nothing — by design it never interrupts your Claude Code session. Configure a key using one of the methods in the [Configuration](#configuration) section above. To confirm key resolution, set `NOMA_DEBUG=1` and check `~/.noma/claude-code-guardrails-debug.log`.
 

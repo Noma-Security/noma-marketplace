@@ -37,7 +37,7 @@ Restart the ChatGPT desktop app, install `guardrails` from the Noma marketplace,
 
 | Variable | Default | Description |
 | --- | --- | --- |
-| `NOMA_API_KEY` | — | API key; falls back to the OS credential store under `noma-guardrails` |
+| `NOMA_API_KEY` | — | API key; falls back to the per-endpoint token left by the Noma MDM discovery script, then the MDM ingestion certificate, then the OS credential store under `noma-guardrails` |
 | `NOMA_API_URL` | `https://api.noma.security` | Noma endpoint; events are posted to `<url>/codex/v1/hooks` with an API key, or `<url>/codex/v2/hooks` with the MDM ingestion certificate |
 | `NOMA_DRYRUN` | — | Print the payload instead of sending it |
 | `NOMA_DEBUG` | — | Write diagnostics to `~/.noma/codex-guardrails-debug.log` |
@@ -46,7 +46,7 @@ The reported `username` is the signed-in ChatGPT account email, read from `$CODE
 
 ### Operating system credential store
 
-If `NOMA_API_KEY` is not in Codex's process environment, on fleets provisioned for Noma MDM discovery the hook uses the ingestion key from the MDM-deployed certificate (macOS System keychain / Windows LocalMachine certificate store) and reports through `/codex/v2/hooks` instead of `/codex/v1/hooks`. With neither, it looks the key up in the current user's credential store.
+If `NOMA_API_KEY` is not in Codex's process environment, on fleets provisioned for Noma MDM discovery the hook first uses the per-endpoint token the discovery script left on the machine (`/Library/Application Support/Noma/endpoint-token` on macOS, `%ProgramData%\Noma\endpoint-token` on Windows — a short-lived device-bound token sent like an API key through `/codex/v1/hooks`), then the ingestion key from the MDM-deployed certificate (macOS System keychain / Windows LocalMachine certificate store), reporting through `/codex/v2/hooks` instead of `/codex/v1/hooks`. With none of these, it looks the key up in the current user's credential store.
 
 #### macOS
 

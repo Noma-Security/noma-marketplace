@@ -28,7 +28,7 @@ ASK verdicts are non-blocking because Cursor does not reliably enforce hook ASK.
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `NOMA_API_KEY` | — | API key; falls back to the OS credential store (service `noma-guardrails`: macOS Keychain, Linux libsecret, Windows Credential Manager) |
+| `NOMA_API_KEY` | — | API key; falls back to the per-endpoint token left by the Noma MDM discovery script, then the MDM ingestion certificate, then the OS credential store (service `noma-guardrails`: macOS Keychain, Linux libsecret, Windows Credential Manager) |
 | `NOMA_API_URL` | `https://api.noma.security` | Noma endpoint; events POST to `<url>/cursor/v1/hooks` with an API key, or `<url>/cursor/v2/hooks` with the MDM ingestion certificate |
 | `NOMA_DRYRUN` | — | print the payload instead of sending (testing) |
 | `NOMA_DEBUG` | — | trace to `~/.noma/cursor-guardrails-debug.log` (diagnostics only, never secrets) |
@@ -84,8 +84,9 @@ The hooks run via `uv run`. If hook executions fail to start:
 The hook resolves the key in this order — first match wins:
 
 1. Environment variable `NOMA_API_KEY` (in Cursor's process environment)
-2. Noma MDM discovery ingestion certificate (macOS System keychain / Windows LocalMachine certificate store) — on fleets provisioned for Noma MDM discovery, the hook reuses that credential and reports through `/cursor/v2/hooks` instead of `/cursor/v1/hooks`
-3. OS credential store entry `noma-guardrails` (see Configuration above)
+2. Per-endpoint token left by the Noma MDM discovery script (`/Library/Application Support/Noma/endpoint-token` on macOS, `%ProgramData%\Noma\endpoint-token` on Windows) — a short-lived token bound to this device that the script obtains with the fleet's ingestion key; sent like an API key through `/cursor/v1/hooks`
+3. Noma MDM discovery ingestion certificate (macOS System keychain / Windows LocalMachine certificate store) — on fleets provisioned for Noma MDM discovery, the hook reuses that credential and reports through `/cursor/v2/hooks` instead of `/cursor/v1/hooks`
+4. OS credential store entry `noma-guardrails` (see Configuration above)
 
 With no key the hook sends nothing and stays silent (fail-open). Set `NOMA_DEBUG=1` and check `~/.noma/cursor-guardrails-debug.log` to see which lookup steps ran.
 

@@ -82,7 +82,7 @@ All plugins share the same configuration surface:
 
 | Variable       | Default                     | Description                                                                                                                             |
 | -------------- | --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
-| `NOMA_API_KEY` | —                           | API key; falls back to the Noma MDM discovery ingestion certificate (macOS/Windows MDM-provisioned fleets only; sent via the agent's `/v2/hooks` endpoint), then to the OS credential store (service `noma-guardrails`: macOS Keychain, Linux libsecret, Windows Credential Manager) |
+| `NOMA_API_KEY` | —                           | API key; falls back to the per-endpoint token left by the Noma MDM discovery script (macOS/Windows MDM-provisioned fleets only; sent like an API key), then to the Noma MDM discovery ingestion certificate (same fleets; sent via the agent's `/v2/hooks` endpoint), then to the OS credential store (service `noma-guardrails`: macOS Keychain, Linux libsecret, Windows Credential Manager) |
 | `NOMA_API_URL` | `https://api.noma.security` | Noma endpoint                                                                                                                           |
 | `NOMA_DRYRUN`  | —                           | print the payload instead of sending (testing)                                                                                          |
 | `NOMA_DEBUG`   | —                           | diagnostic trace to a rotated per-user log file (never secrets)                                                                         |

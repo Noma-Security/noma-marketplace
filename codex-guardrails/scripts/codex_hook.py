@@ -29,7 +29,7 @@ from codex_mcp_discovery import CODEX_CONFIG_FILENAME, _codex_home, _system_conf
 
 KEYCHAIN_SERVICE = "noma-guardrails"
 # equals .version in .codex-plugin/plugin.json; CI enforces it
-HOOK_VERSION = "2.2.3"
+HOOK_VERSION = "2.2.4"
 HOOKS_PATH = "/codex/v1/hooks"
 HOOKS_PATH_V2 = "/codex/v2/hooks"
 NOMA_API_URL = os.environ.get("NOMA_API_URL") or "https://api.noma.security"
