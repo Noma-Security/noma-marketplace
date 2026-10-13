@@ -13,7 +13,7 @@ For more details, visit [noma.security](https://noma.security).
 - **File reads**: protects sensitive local data (e.g., `.env` files, SSH keys) from being indexed or sent to the LLM
 - **User prompt submission**: scans and filters sensitive data, PCI, PII, PHI before it leaves your local environment
 - **MCP server inventory**: on every prompt, sends the machine's Cursor MCP configuration (user, workspace, plugin, and marketplace scopes — mcp.json files plus plugin/marketplace manifest declarations). Only server identity fields (`type`, `url`, `command`, `args`) are sent per server, with secret-looking values masked — `env`, `headers`, and all other fields never leave your machine
-- **Everything else the agent does**: other tool calls are gated via Cursor's generic pre-tool-use hook, and post-action telemetry (tool outputs, file edits, assistant responses) streams to Noma for detection and visibility
+- **Everything else the agent does**: other tool calls are gated via Cursor's generic pre-tool-use hook, and post-action telemetry (tool outputs, file edits, assistant responses) streams to Noma for detection and visibility. A BLOCK verdict on an MCP tool result replaces the whole result the agent sees with a single text block carrying the block reason (`[Blocked by Noma Security] …`); shell and file-read results have no post-execution replacement channel in Cursor, so BLOCK on those is recorded but not enforced
 
 ASK verdicts are non-blocking because Cursor does not reliably enforce hook ASK. Noma returns the existing allow response; no confirmation or answer is recorded. BLOCK verdicts remain enforced.
 

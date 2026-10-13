@@ -24,9 +24,11 @@ In interactive Claude Code sessions, an ASK policy on `PreToolUse` displays Noma
 
 A MASK policy on `PreToolUse` replaces the tool input with Noma's anonymized version and auto-approves the call, so the tool runs with the sensitive values redacted. On `PostToolUse` it replaces the tool result Claude sees; the tool has already run, so only the model context is redacted. Masking is fail-open: a rewrite that cannot be applied safely (structure or type changes, an emptied shell command, or an unsupported Claude Code version) leaves the original content untouched while the detection is still recorded. MASK on `UserPromptSubmit` and `Stop` is observational because those events cannot replace content.
 
+A BLOCK policy on `PostToolUse` also replaces the string values of the tool result Claude sees with `[Blocked by Noma Security]` (preserving the result structure and the schema literals Claude Code validates) alongside the block reason, since the tool has already run; a result with nothing to replace gets the bare block. Like masking, the rewrite requires Claude Code v2.1.121+; older versions still receive the block reason but keep the original result.
+
 ## Prerequisites
 
-- **Claude Code v2.0.12+**: ASK is best-effort before v2.1.211; reliable ASK prompting in auto mode requires v2.1.211+. `PostToolUse` masking requires v2.1.121+ (`updatedToolOutput`); older versions ignore the rewrite
+- **Claude Code v2.0.12+**: ASK is best-effort before v2.1.211; reliable ASK prompting in auto mode requires v2.1.211+. `PostToolUse` masking and block result replacement require v2.1.121+ (`updatedToolOutput`); older versions ignore the rewrite
 - **Noma API Key**: Request an API Key for this plugin from your Noma Technical Account manager (Note: This is not an API Key that you create within the Noma Console)
 - **Supported OS**: macOS, Linux, or Windows — one plugin, identical behavior on all three
 - **[`uv`](https://docs.astral.sh/uv/)**: the hooks run via `uv` (Astral's Python runner), which supplies the Python the hook needs — no system `python3` or `pip` packages required. `uv` must be on the `PATH` of the environment that launches the hooks
