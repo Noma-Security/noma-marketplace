@@ -32,7 +32,7 @@ from mcp_discovery import discover_claude_code
 # agent-agnostic.
 KEYCHAIN_SERVICE = "noma-guardrails"
 # equals .version in .claude-plugin/plugin.json; CI enforces it
-HOOK_VERSION = "2.4.0"
+HOOK_VERSION = "2.4.1"
 HOOKS_PATH = "/claude/v1/hooks"
 HOOKS_PATH_V2 = "/claude/v2/hooks"
 DEBUG_LOG_FILENAME = "claude-code-guardrails-debug.log"
@@ -84,6 +84,11 @@ def main():
     except Exception as e:
         debug.exc("stdin JSON parse", e)
         event = None
+
+    # Cursor runs Claude Code hooks alongside its own; Noma's Cursor hook reports its events.
+    if event is not None and event.get("cursor_version"):
+        debug.log("event " + str(event.get("hook_event_name")) + " from Cursor; skipped")
+        return 0
 
     if event is not None and event.get("hook_event_name") == "UserPromptSubmit":
         # Augment the prompt event with the per-scope MCP inventory. The engine
