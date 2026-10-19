@@ -87,6 +87,9 @@ All plugins share the same configuration surface:
 | `NOMA_DRYRUN`  | —                           | print the payload instead of sending (testing)                                                                                          |
 | `NOMA_DEBUG`   | —                           | diagnostic trace to a rotated per-user log file (never secrets)                                                                         |
 | `NOMA_HOOKS_PATH` | agent hooks path         | replaces the hooks path of the POST; the MDM post-install probe sets `/probe/hooks/v1`                                                  |
+| `CUSTOM_CA_CERT` / `CURL_CA_BUNDLE` | —      | macOS/Linux: a readable PEM (e.g. a corporate TLS-inspection root) passed to `curl` as `--cacert`; `CUSTOM_CA_CERT` wins               |
+
+Events are sent with `curl` (the built-in `curl.exe` on Windows), so they trust the OS certificate store; Python's `urllib` is the fallback when curl is missing or cannot reach the endpoint.
 
 
 ## Design Principles

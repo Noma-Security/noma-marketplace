@@ -34,7 +34,7 @@ from cursor_mcp_discovery import discover_cursor
 # one stored key serves both.
 KEYCHAIN_SERVICE = "noma-guardrails"
 # equals .version in .cursor-plugin/plugin.json; CI enforces it
-HOOK_VERSION = "1.3.0"
+HOOK_VERSION = "1.4.0"
 HOOKS_PATH = "/cursor/v1/hooks"
 HOOKS_PATH_V2 = "/cursor/v2/hooks"
 DEBUG_LOG_FILENAME = "cursor-guardrails-debug.log"

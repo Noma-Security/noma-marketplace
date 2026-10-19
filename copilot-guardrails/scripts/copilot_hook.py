@@ -22,7 +22,7 @@ from copilot_mcp_discovery import copilot_home, discover_copilot
 
 KEYCHAIN_SERVICE = "noma-guardrails"
 # equals .version in .plugin/plugin.json; CI enforces it
-HOOK_VERSION = "1.2.0"
+HOOK_VERSION = "1.3.0"
 HOOKS_PATH = "/github-copilot/v1/hooks"
 HOOKS_PATH_V2 = "/github-copilot/v2/hooks"
 DEBUG_LOG_FILENAME = "copilot-guardrails-debug.log"

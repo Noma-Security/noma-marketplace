@@ -29,7 +29,7 @@ from codex_mcp_discovery import CODEX_CONFIG_FILENAME, _codex_home, _system_conf
 
 KEYCHAIN_SERVICE = "noma-guardrails"
 # equals .version in .codex-plugin/plugin.json; CI enforces it
-HOOK_VERSION = "2.3.0"
+HOOK_VERSION = "2.4.0"
 HOOKS_PATH = "/codex/v1/hooks"
 HOOKS_PATH_V2 = "/codex/v2/hooks"
 DEBUG_LOG_FILENAME = "codex-guardrails-debug.log"
