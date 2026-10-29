@@ -29,15 +29,19 @@ def _json_object_or_empty(body):
     return ""
 
 
-def post(payload_str, api_key, api_url, hooks_path, scheme="Bearer"):
+def post(payload_str, api_key, api_url, hooks_path, scheme="Bearer", on_response=None,
+         budget_seconds=BUDGET_SECONDS):
     """POST the payload to api_url + hooks_path; print the response if it is a
-    JSON object (an error page or a truncated body prints nothing).
+    JSON object (an error page or a truncated body prints nothing). With
+    on_response set, the parsed JSON object is handed to it instead of printed,
+    for agents whose hook protocol is not the backend's response verbatim.
 
     Two attempts, the second on any failure, through the same client. When the
     native client never got the request off the machine, urllib takes over without
     using up an attempt, so it gets the two tries it had before the native client
-    existed. Every attempt after the first gets only what is left of BUDGET_SECONDS,
-    and is skipped below MIN_ATTEMPT_SECONDS. With
+    existed. Every attempt gets an equal share of what is left of the shared budget
+    (BUDGET_SECONDS, or less via budget_seconds for a caller that already spent part of
+    its hook timeout) for the attempts left, and is skipped below MIN_ATTEMPT_SECONDS. With
     NOMA_DRYRUN set, print the payload instead of sending it (no network). Always returns 0: a failed send is
     swallowed so a backend outage never surfaces as a hook error (degrade quietly).
     scheme="" sends the credential bare in x-noma-key (v2 ingestion key)."""
@@ -53,11 +57,16 @@ def post(payload_str, api_key, api_url, hooks_path, scheme="Bearer"):
     fallback = http_senders.UrllibSender()
     first = http_senders.native_sender() or fallback
     debug.log("POST " + str(len(payload_str)) + " bytes to " + url + " via " + first.name)
-    deadline = time.monotonic() + BUDGET_SECONDS
+    budget = min(budget_seconds, BUDGET_SECONDS)
+    deadline = time.monotonic() + budget
     client = first
     attempts_left = 2
-    timeout = TIMEOUT_SECONDS
+    # Every attempt gets at most TIMEOUT_SECONDS and an equal share of the budget left for the attempts left.
+    timeout = min(TIMEOUT_SECONDS, budget / attempts_left)
     while True:
+        if timeout < MIN_ATTEMPT_SECONDS:
+            debug.log("POST to " + url + " stopped: no time left in the budget")
+            return 0
         try:
             status, body = client.send(url, headers, payload_str, timeout)
             break
@@ -71,12 +80,14 @@ def post(payload_str, api_key, api_url, hooks_path, scheme="Bearer"):
                     debug.exc("POST failed " + url, e)
                     return 0  # degrade quietly - a failed send must not error the user's session
                 debug.exc("POST attempt via " + client.name + " failed (retrying) " + url, e)
-        timeout = min(TIMEOUT_SECONDS, deadline - time.monotonic())
-        if timeout < MIN_ATTEMPT_SECONDS:
-            debug.log("POST to " + url + " stopped: no time left in the budget")
-            return 0
+        timeout = min(TIMEOUT_SECONDS, (deadline - time.monotonic()) / attempts_left)
     debug.log("POST ok " + url + " (HTTP " + str(status) + ")")
     decision = _json_object_or_empty(body) if body else ""
-    if decision:
+    if decision and on_response is not None:
+        try:
+            on_response(json.loads(decision))
+        except Exception as e:
+            debug.exc("response handler", e)
+    elif decision:
         sys.stdout.write(decision if decision.endswith("\n") else decision + "\n")
     return 0

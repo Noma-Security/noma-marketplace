@@ -1,0 +1,41 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "Noma Guardrails (UserPromptSubmit)",
+      "trigger": "UserPromptSubmit",
+      "action": {
+        "type": "command",
+        "command": "python3 /usr/local/noma/guardrails/kiro/scripts/kiro_hook.py UserPromptSubmit; [ $? -eq 42 ] && exit 2 || exit 0"
+      },
+      "timeout": 25
+    },
+    {
+      "name": "Noma Guardrails (PreToolUse)",
+      "trigger": "PreToolUse",
+      "action": {
+        "type": "command",
+        "command": "python3 /usr/local/noma/guardrails/kiro/scripts/kiro_hook.py PreToolUse; [ $? -eq 42 ] && exit 2 || exit 0"
+      },
+      "timeout": 25
+    },
+    {
+      "name": "Noma Guardrails (PostToolUse)",
+      "trigger": "PostToolUse",
+      "action": {
+        "type": "command",
+        "command": "python3 /usr/local/noma/guardrails/kiro/scripts/kiro_hook.py PostToolUse; [ $? -eq 42 ] && exit 2 || exit 0"
+      },
+      "timeout": 25
+    },
+    {
+      "name": "Noma Guardrails (Stop)",
+      "trigger": "Stop",
+      "action": {
+        "type": "command",
+        "command": "python3 /usr/local/noma/guardrails/kiro/scripts/kiro_hook.py Stop; [ $? -eq 42 ] && exit 2 || exit 0"
+      },
+      "timeout": 25
+    }
+  ]
+}

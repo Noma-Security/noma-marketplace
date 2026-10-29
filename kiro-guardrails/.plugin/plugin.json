@@ -1,0 +1,7 @@
+{
+  "name": "guardrails",
+  "description": "Noma AIDR guardrails for Kiro (CLI V3 and IDE 1.x)",
+  "version": "1.0.0",
+  "author": { "name": "Noma Security" },
+  "hooks": "./hooks/hooks.json"
+}

@@ -61,9 +61,12 @@ def _absolute_path_entries():
 def _windows_curl():
     """Never the current directory - it is the agent's workspace, so a curl.exe planted there
     would receive the key - which CreateProcess and shutil.which search before PATH."""
-    inbox = os.path.join(os.environ.get("SystemRoot", "C:\\Windows"), "System32", "curl.exe")
-    if os.path.isfile(inbox):
-        return inbox
+    system_root = os.environ.get("SystemRoot", "C:\\Windows")
+    # Sysnative first: a 32-bit Python on 64-bit Windows sees System32 redirected to SysWOW64.
+    for system_dir in ("Sysnative", "System32"):
+        inbox = os.path.join(system_root, system_dir, "curl.exe")
+        if os.path.isfile(inbox):
+            return inbox
     for entry in _absolute_path_entries():
         if os.path.isfile(os.path.join(entry, "curl.exe")):
             return os.path.join(entry, "curl.exe")
@@ -95,7 +98,8 @@ class CurlSender(Sender):
         self.windows = windows
 
     def send(self, url, headers, body, timeout):
-        cmd = [self.binary, "-sS", "-o", "-", "-w", "\\n%{http_code} %{time_connect}",
+        # -q must lead: it skips .curlrc, whose `location` would follow a redirect with the key.
+        cmd = [self.binary, "-q", "-sS", "-o", "-", "-w", "\\n%{http_code} %{time_connect}",
                "-X", "POST", url, "--max-time", "%g" % timeout] + _curl_proxy_args(url)
         if self.windows:
             # Schannel checks revocation by default and fails when the CA's revocation server is
@@ -143,8 +147,8 @@ class CurlSender(Sender):
 
 
 def _curl_errors(stderr):
-    """curl's own error lines, the only stderr -sS prints. A .curlrc with `verbose` or `trace`
-    adds the request headers - the key included - which must never reach the debug log."""
+    """curl's own error lines, the only stderr -sS prints: verbose or trace output would carry
+    the request headers - the key included - which must never reach the debug log."""
     lines = (stderr or b"").decode("utf-8", "replace").splitlines()
     return "\n".join(line.strip() for line in lines if line.startswith("curl: "))
 
@@ -198,6 +202,20 @@ def _never_connected(connect_text):
         return False
 
 
+class _RefuseRedirects(urllib.request.HTTPRedirectHandler):
+    """A 3xx becomes an HTTPError instead of a second request: urllib re-sends the request
+    headers, the x-noma-key credential among them, to wherever the redirect points, another
+    origin included. curl, without -L, never follows one either."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
+
+
+def _urlopen(req, timeout):
+    # Built per call, like urlopen's own opener, so proxy env vars set after import still apply.
+    return urllib.request.build_opener(_RefuseRedirects).open(req, timeout=timeout)
+
+
 class UrllibSender(Sender):
     """POSTs through Python's urllib - the hooks' original transport."""
 
@@ -205,7 +223,7 @@ class UrllibSender(Sender):
 
     def send(self, url, headers, body, timeout):
         req = urllib.request.Request(url, data=body.encode("utf-8"), headers=headers, method="POST")
-        resp = urllib.request.urlopen(req, timeout=timeout)
+        resp = _urlopen(req, timeout)
         try:
             response_body = resp.read().decode("utf-8", "replace")
         except Exception as e:

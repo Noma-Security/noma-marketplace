@@ -19,6 +19,7 @@ Windows.
 | `guardrails` | [Codex](https://openai.com/codex/)            | [codex-guardrails/README.md](codex-guardrails/README.md)         |
 | `guardrails` | [Cursor](https://cursor.com)                  | [cursor-guardrails/README.md](cursor-guardrails/README.md)       |
 | `guardrails` | [GitHub Copilot](https://github.com/features/copilot) | [copilot-guardrails/README.md](copilot-guardrails/README.md) |
+| `guardrails` | [Kiro](https://kiro.dev) (CLI V3 and IDE)        | [kiro-guardrails/README.md](kiro-guardrails/README.md)           |
 
 
 ## What We Protect
@@ -75,6 +76,12 @@ In interactive Copilot CLI 1.0.78+, Noma can request native confirmation before 
 
 → [Full GitHub Copilot setup, configuration, and troubleshooting](copilot-guardrails/README.md)
 
+### Kiro
+
+Kiro has no plugin marketplace: copy the plugin to `/usr/local/noma/guardrails/kiro` (macOS) or `%ProgramData%\Noma\guardrails\kiro` (Windows) and install its hook file as `~/.kiro/hooks/noma.json`; the plugin README has the commands for both. Supported on macOS and Windows with Kiro CLI running the V3 agent engine (the default from Kiro CLI 3.0) and Kiro IDE 1.x. Kiro reports only through `/kiro/v1/hooks` with an ingestion key (the MDM-deployed certificate, or `NOMA_API_KEY`); API keys and the per-endpoint token are not used. Noma can block a tool call or request Kiro's native confirmation before it runs; a prompt verdict cannot stop the prompt (Kiro sends it to the model and adds the reason as context), tool results are recorded only, and a response (`Stop`) verdict asks Kiro to continue with the detection reason.
+
+→ [Full Kiro setup, configuration, and troubleshooting](kiro-guardrails/README.md)
+
 ## Configuration
 
 All plugins share the same configuration surface:
@@ -95,7 +102,7 @@ Events are sent with `curl` (the built-in `curl.exe` on Windows), so they trust 
 ## Design Principles
 
 - **Fail open, degrade quietly** — a hook must never break or slow the user's session: any failure (no key, no network, bad input) exits clean without emitting a decision, leaving the agent's default behavior in place
-- **No dependencies** — Python standard library only; no `pip`. Core hooks work on Python 3.6+. Claude Code and Cursor hooks run via [`uv`](https://docs.astral.sh/uv/); Codex hooks invoke a Python installation directly (the Noma-managed one when present, else the `PATH` python)
+- **No dependencies** — Python standard library only; no `pip`. Core hooks work on Python 3.6+. Claude Code, Cursor and Kiro hooks run via [`uv`](https://docs.astral.sh/uv/); Codex hooks invoke a Python installation directly (the Noma-managed one when present, else the `PATH` python)
 - **Least data** — only fields required for policy evaluation leave the machine, with secret-looking values masked
 - **Bounded execution** — every hook, HTTP call, and credential lookup carries a timeout
 
@@ -103,7 +110,7 @@ Events are sent with `curl` (the built-in `curl.exe` on Windows), so they trust 
 ## Prerequisites
 
 - A supported agent (see the plugin READMEs for minimum versions)
-- Claude Code / Cursor: [`uv`](https://docs.astral.sh/uv/) on the `PATH` the agent launches hooks with (`brew install uv`, `winget install astral-sh.uv`, or your fleet's MDM)
+- Claude Code / Cursor / Kiro: [`uv`](https://docs.astral.sh/uv/) on the `PATH` the agent launches hooks with (`brew install uv`, `winget install astral-sh.uv`, or your fleet's MDM)
 - Codex: a Python 3.6+ — the Noma-managed installation deployed by your fleet's MDM, or a `python3`/`python` on the `PATH` (see the Codex plugin README)
 - A Noma API key
 

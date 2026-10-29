@@ -218,10 +218,25 @@ if ($NomaIngestionKey) { break }
 if ($NomaIngestionKey) { Write-Output $NomaIngestionKey }""" % (MDM_CERT_CN, _MDM_KEY_RE)
 
 
+def _windows_powershell():
+    """Windows PowerShell by absolute path, or "": a bare name resolves in the current directory
+    - the agent's workspace - before the system directories."""
+    system_root = os.environ.get("SystemRoot", "C:\\Windows")
+    # Sysnative first: a 32-bit Python on 64-bit Windows sees System32 redirected to SysWOW64.
+    for system_dir in ("Sysnative", "System32"):
+        exe = os.path.join(system_root, system_dir, "WindowsPowerShell", "v1.0", "powershell.exe")
+        if os.path.isfile(exe):
+            return exe
+    return ""
+
+
 def _windows_ingestion_key():
     """The ingestion key from the deployed cert (LocalMachine, then CurrentUser); "" if absent."""
-    return _run(["powershell", "-NoProfile", "-NonInteractive",
-                 "-Command", _WINDOWS_CERT_PS])
+    powershell = _windows_powershell()
+    if not powershell:
+        debug.log("Windows PowerShell not found; no ingestion key from the certificate store")
+        return ""
+    return _run([powershell, "-NoProfile", "-NonInteractive", "-Command", _WINDOWS_CERT_PS])
 
 
 def resolve_ingestion_key():
@@ -239,13 +254,14 @@ def resolve_ingestion_key():
     return key
 
 
-def resolve_api_key(service):
+def resolve_api_key(service=None):
     """(key, key_scope): NOMA_API_KEY env wins, then the per-endpoint token, then
     the MDM ingestion key, then the OS credential store; ("", KeyScope.NONE) when
     nothing resolves.
 
     `service` is the credential-store key, supplied by the caller so this module
-    stays generic (the guardrails hook passes "noma-guardrails")."""
+    stays generic (the guardrails hook passes "noma-guardrails"); without one the
+    store is skipped, for a hook whose route takes no API key."""
     key = os.environ.get("NOMA_API_KEY")
     if key:
         debug.log("API key resolved from NOMA_API_KEY env/settings")
@@ -256,6 +272,8 @@ def resolve_api_key(service):
     key = resolve_ingestion_key()
     if key:
         return key, KeyScope.DATA_COLLECTOR_KEY
+    if not service:
+        return "", KeyScope.NONE
     key = _from_store(service)
     debug.log("credential store " + ("returned a key" if key else "returned nothing"))
     if key:
