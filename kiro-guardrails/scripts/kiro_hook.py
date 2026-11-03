@@ -33,14 +33,14 @@ from kiro_mcp_discovery import discover_kiro, kiro_home
 
 
 # equals .version in .plugin/plugin.json; CI enforces it
-HOOK_VERSION = "1.0.0"
+HOOK_VERSION = "1.1.0"
 # Kiro has one route: the gateway takes the ingestion key (bare) or the per-endpoint JWT (Bearer) on it.
 HOOKS_PATH = "/kiro/v1/hooks"
 DEBUG_LOG_FILENAME = "kiro-guardrails-debug.log"
 # Branded before the import-time config load so its debug lines land in this hook's log.
 debug.set_log_filename(DEBUG_LOG_FILENAME)
 installed_config.apply_installed_env()
-NOMA_API_URL = os.environ.get("NOMA_API_URL") or transport.DEFAULT_API_URL
+NOMA_API_URL = transport.api_url()
 
 EVENT_PROMPT = "UserPromptSubmit"
 EVENT_PRE_TOOL = "PreToolUse"

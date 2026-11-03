@@ -32,14 +32,14 @@ from mcp_discovery import discover_claude_code
 # agent-agnostic.
 KEYCHAIN_SERVICE = "noma-guardrails"
 # equals .version in .claude-plugin/plugin.json; CI enforces it
-HOOK_VERSION = "2.5.1"
+HOOK_VERSION = "2.6.0"
 HOOKS_PATH = "/claude/v1/hooks"
 HOOKS_PATH_V2 = "/claude/v2/hooks"
 DEBUG_LOG_FILENAME = "claude-code-guardrails-debug.log"
 # Branded before the import-time config load so its debug lines land in this hook's log.
 debug.set_log_filename(DEBUG_LOG_FILENAME)
 installed_config.apply_installed_env()
-NOMA_API_URL = os.environ.get("NOMA_API_URL") or transport.DEFAULT_API_URL
+NOMA_API_URL = transport.api_url()
 
 
 def account_email():

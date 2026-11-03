@@ -34,14 +34,14 @@ from cursor_mcp_discovery import discover_cursor
 # one stored key serves both.
 KEYCHAIN_SERVICE = "noma-guardrails"
 # equals .version in .cursor-plugin/plugin.json; CI enforces it
-HOOK_VERSION = "1.4.1"
+HOOK_VERSION = "1.5.0"
 HOOKS_PATH = "/cursor/v1/hooks"
 HOOKS_PATH_V2 = "/cursor/v2/hooks"
 DEBUG_LOG_FILENAME = "cursor-guardrails-debug.log"
 # Branded before the import-time config load so its debug lines land in this hook's log.
 debug.set_log_filename(DEBUG_LOG_FILENAME)
 installed_config.apply_installed_env()
-NOMA_API_URL = os.environ.get("NOMA_API_URL") or transport.DEFAULT_API_URL
+NOMA_API_URL = transport.api_url()
 
 
 def enrich(payload):

@@ -29,14 +29,14 @@ from codex_mcp_discovery import CODEX_CONFIG_FILENAME, _codex_home, _system_conf
 
 KEYCHAIN_SERVICE = "noma-guardrails"
 # equals .version in .codex-plugin/plugin.json; CI enforces it
-HOOK_VERSION = "2.4.1"
+HOOK_VERSION = "2.5.0"
 HOOKS_PATH = "/codex/v1/hooks"
 HOOKS_PATH_V2 = "/codex/v2/hooks"
 DEBUG_LOG_FILENAME = "codex-guardrails-debug.log"
 # Branded before the import-time config load so its debug lines land in this hook's log.
 debug.set_log_filename(DEBUG_LOG_FILENAME)
 installed_config.apply_installed_env()
-NOMA_API_URL = os.environ.get("NOMA_API_URL") or transport.DEFAULT_API_URL
+NOMA_API_URL = transport.api_url()
 AUTH_FILENAME = "auth.json"
 AUTH_MAX_BYTES = 64 * 1024
 CONFIG_MAX_BYTES = 256 * 1024

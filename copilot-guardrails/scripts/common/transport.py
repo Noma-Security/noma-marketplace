@@ -8,16 +8,49 @@ only, no f-strings/annotations - runs on any python3.
 
 import json
 import os
+import re
 import sys
 import time
+import urllib.parse
 
-from . import debug, http_senders
+from . import debug, http_senders, installed_config
 
 TIMEOUT_SECONDS = 10
 # Both attempts share one budget so they fit the 25s hook timeout the manifests set.
 BUDGET_SECONDS = 2 * TIMEOUT_SECONDS
 MIN_ATTEMPT_SECONDS = 1
 DEFAULT_API_URL = "https://api.noma.security"
+NOMA_DOMAIN = "noma.security"
+LOOPBACK_HOSTS = ("localhost", "127.0.0.1", "::1")
+_HOST = re.compile(r"[a-z0-9.-]+")
+_HOOKS_PATH = re.compile(r"(/[A-Za-z0-9._~-]*)+")
+
+
+def _allowed_api_url(url):
+    """https on a Noma host, or http(s) on loopback; no credentials, query or fragment."""
+    if "\\" in url or any(c.isspace() or ord(c) < 32 for c in url):
+        return False
+    try:
+        parts = urllib.parse.urlsplit(url)
+        parts.port  # raises on a bad port
+    except ValueError:
+        return False
+    host = parts.hostname or ""
+    if parts.username is not None or parts.query or parts.fragment or (host != "::1" and not _HOST.fullmatch(host)):
+        return False
+    if host in LOOPBACK_HOSTS:
+        return parts.scheme in ("http", "https")
+    return parts.scheme == "https" and (host == NOMA_DOMAIN or host.endswith("." + NOMA_DOMAIN))
+
+
+def api_url():
+    """NOMA_API_URL when the installed config set it or it is allowed (_allowed_api_url), else
+    the default: a repo's agent settings can inject env, and must not redirect the hooks' key and events."""
+    url = os.environ.get("NOMA_API_URL") or DEFAULT_API_URL
+    if url == installed_config.configured("NOMA_API_URL") or _allowed_api_url(url):
+        return url
+    debug.log("NOMA_API_URL ignored: not a Noma or loopback host; using " + DEFAULT_API_URL)
+    return DEFAULT_API_URL
 
 
 def _json_object_or_empty(body):
@@ -45,7 +78,11 @@ def post(payload_str, api_key, api_url, hooks_path, scheme="Bearer", on_response
     NOMA_DRYRUN set, print the payload instead of sending it (no network). Always returns 0: a failed send is
     swallowed so a backend outage never surfaces as a hook error (degrade quietly).
     scheme="" sends the credential bare in x-noma-key (v2 ingestion key)."""
-    hooks_path = os.environ.get("NOMA_HOOKS_PATH") or hooks_path
+    override = os.environ.get("NOMA_HOOKS_PATH")
+    if override and _HOOKS_PATH.fullmatch(override):
+        hooks_path = override
+    elif override:
+        debug.log("NOMA_HOOKS_PATH ignored: not a plain URL path")
     url = api_url.rstrip("/") + hooks_path
     if os.environ.get("NOMA_DRYRUN"):
         debug.log("DRY-RUN would POST to " + url + " (" + str(len(payload_str)) + " bytes)")

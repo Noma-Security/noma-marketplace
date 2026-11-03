@@ -22,14 +22,14 @@ from copilot_mcp_discovery import copilot_home, discover_copilot
 
 KEYCHAIN_SERVICE = "noma-guardrails"
 # equals .version in .plugin/plugin.json; CI enforces it
-HOOK_VERSION = "1.3.1"
+HOOK_VERSION = "1.4.0"
 HOOKS_PATH = "/github-copilot/v1/hooks"
 HOOKS_PATH_V2 = "/github-copilot/v2/hooks"
 DEBUG_LOG_FILENAME = "copilot-guardrails-debug.log"
 # Branded before the import-time config load so its debug lines land in this hook's log.
 debug.set_log_filename(DEBUG_LOG_FILENAME)
 installed_config.apply_installed_env()
-NOMA_API_URL = os.environ.get("NOMA_API_URL") or transport.DEFAULT_API_URL
+NOMA_API_URL = transport.api_url()
 
 _PLUGIN_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
