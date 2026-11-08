@@ -1,4 +1,4 @@
-# Noma remote hooks for GitHub Copilot
+# Noma guardrails over HTTP hooks for GitHub Copilot
 
 Copilot `type: "http"` hooks that POST every `userPromptSubmitted`, `preToolUse`, `postToolUse` and
 `agentStop` event to `https://api.noma.security/github-copilot/v1/hooks`. Copilot makes the call itself,
@@ -12,7 +12,7 @@ so nothing runs on the endpoint: no Python, no scripts.
 
    ```bash
    copilot plugin marketplace add Noma-Security/noma-marketplace
-   copilot plugin install noma-remote-hooks@noma
+   copilot plugin install guardrails-http@noma
    ```
 
    Or require it for the whole enterprise from `.github/copilot/managed-settings.json` in the enterprise's
@@ -23,7 +23,7 @@ so nothing runs on the endpoint: no Python, no scripts.
      "extraKnownMarketplaces": {
        "noma": { "source": { "source": "github", "repo": "Noma-Security/noma-marketplace" }, "autoUpdate": true }
      },
-     "enabledPlugins": { "noma-remote-hooks@noma": true }
+     "enabledPlugins": { "guardrails-http@noma": true }
    }
    ```
 

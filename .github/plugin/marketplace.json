@@ -14,10 +14,10 @@
       "description": "Noma AIDR guardrails for GitHub Copilot (macOS, Linux, Windows)"
     },
     {
-      "name": "noma-remote-hooks",
-      "source": "./copilot-remote-hooks",
+      "name": "guardrails-http",
+      "source": "./copilot-guardrails-http",
       "version": "0.1.0",
-      "description": "Noma AI-DR HTTP hooks for GitHub Copilot, with nothing to run on the endpoint"
+      "description": "Noma AIDR guardrails for GitHub Copilot over HTTP hooks, with nothing to run on the endpoint"
     }
   ]
 }
