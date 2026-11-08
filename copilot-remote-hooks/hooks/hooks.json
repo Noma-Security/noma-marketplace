@@ -1,0 +1,133 @@
+{
+  "version": 1,
+  "hooks": {
+    "userPromptSubmitted": [
+      {
+        "type": "http",
+        "url": "https://api.noma.security/github-copilot/v1/hooks",
+        "timeoutSec": 25,
+        "headers": {
+          "Authorization": "Bearer ${NOMA_API_KEY}",
+          "x-noma-hook-event-name": "userPromptSubmitted",
+          "x-noma-user-id": "${GITHUB_USER}|${GITPOD_GIT_USER_EMAIL}|${CODER_WORKSPACE_OWNER_NAME}|${GITHUB_ACTOR}|${SUDO_USER}|${USER}|${USERNAME}|${LOGNAME}",
+          "x-noma-hostname": "${COMPUTERNAME}|${CODESPACE_NAME}|${GITPOD_WORKSPACE_ID}|${CODER_WORKSPACE_NAME}|${RUNNER_NAME}|${HOSTNAME}|${HOST}|${NAME}"
+        },
+        "allowedEnvVars": [
+          "NOMA_API_KEY",
+          "GITHUB_USER",
+          "GITPOD_GIT_USER_EMAIL",
+          "CODER_WORKSPACE_OWNER_NAME",
+          "GITHUB_ACTOR",
+          "SUDO_USER",
+          "USER",
+          "USERNAME",
+          "LOGNAME",
+          "COMPUTERNAME",
+          "CODESPACE_NAME",
+          "GITPOD_WORKSPACE_ID",
+          "CODER_WORKSPACE_NAME",
+          "RUNNER_NAME",
+          "HOSTNAME",
+          "HOST",
+          "NAME"
+        ]
+      }
+    ],
+    "preToolUse": [
+      {
+        "type": "http",
+        "url": "https://api.noma.security/github-copilot/v1/hooks",
+        "timeoutSec": 25,
+        "headers": {
+          "Authorization": "Bearer ${NOMA_API_KEY}",
+          "x-noma-hook-event-name": "preToolUse",
+          "x-noma-user-id": "${GITHUB_USER}|${GITPOD_GIT_USER_EMAIL}|${CODER_WORKSPACE_OWNER_NAME}|${GITHUB_ACTOR}|${SUDO_USER}|${USER}|${USERNAME}|${LOGNAME}",
+          "x-noma-hostname": "${COMPUTERNAME}|${CODESPACE_NAME}|${GITPOD_WORKSPACE_ID}|${CODER_WORKSPACE_NAME}|${RUNNER_NAME}|${HOSTNAME}|${HOST}|${NAME}"
+        },
+        "allowedEnvVars": [
+          "NOMA_API_KEY",
+          "GITHUB_USER",
+          "GITPOD_GIT_USER_EMAIL",
+          "CODER_WORKSPACE_OWNER_NAME",
+          "GITHUB_ACTOR",
+          "SUDO_USER",
+          "USER",
+          "USERNAME",
+          "LOGNAME",
+          "COMPUTERNAME",
+          "CODESPACE_NAME",
+          "GITPOD_WORKSPACE_ID",
+          "CODER_WORKSPACE_NAME",
+          "RUNNER_NAME",
+          "HOSTNAME",
+          "HOST",
+          "NAME"
+        ]
+      }
+    ],
+    "postToolUse": [
+      {
+        "type": "http",
+        "url": "https://api.noma.security/github-copilot/v1/hooks",
+        "timeoutSec": 25,
+        "headers": {
+          "Authorization": "Bearer ${NOMA_API_KEY}",
+          "x-noma-hook-event-name": "postToolUse",
+          "x-noma-user-id": "${GITHUB_USER}|${GITPOD_GIT_USER_EMAIL}|${CODER_WORKSPACE_OWNER_NAME}|${GITHUB_ACTOR}|${SUDO_USER}|${USER}|${USERNAME}|${LOGNAME}",
+          "x-noma-hostname": "${COMPUTERNAME}|${CODESPACE_NAME}|${GITPOD_WORKSPACE_ID}|${CODER_WORKSPACE_NAME}|${RUNNER_NAME}|${HOSTNAME}|${HOST}|${NAME}"
+        },
+        "allowedEnvVars": [
+          "NOMA_API_KEY",
+          "GITHUB_USER",
+          "GITPOD_GIT_USER_EMAIL",
+          "CODER_WORKSPACE_OWNER_NAME",
+          "GITHUB_ACTOR",
+          "SUDO_USER",
+          "USER",
+          "USERNAME",
+          "LOGNAME",
+          "COMPUTERNAME",
+          "CODESPACE_NAME",
+          "GITPOD_WORKSPACE_ID",
+          "CODER_WORKSPACE_NAME",
+          "RUNNER_NAME",
+          "HOSTNAME",
+          "HOST",
+          "NAME"
+        ]
+      }
+    ],
+    "agentStop": [
+      {
+        "type": "http",
+        "url": "https://api.noma.security/github-copilot/v1/hooks",
+        "timeoutSec": 25,
+        "headers": {
+          "Authorization": "Bearer ${NOMA_API_KEY}",
+          "x-noma-hook-event-name": "agentStop",
+          "x-noma-user-id": "${GITHUB_USER}|${GITPOD_GIT_USER_EMAIL}|${CODER_WORKSPACE_OWNER_NAME}|${GITHUB_ACTOR}|${SUDO_USER}|${USER}|${USERNAME}|${LOGNAME}",
+          "x-noma-hostname": "${COMPUTERNAME}|${CODESPACE_NAME}|${GITPOD_WORKSPACE_ID}|${CODER_WORKSPACE_NAME}|${RUNNER_NAME}|${HOSTNAME}|${HOST}|${NAME}"
+        },
+        "allowedEnvVars": [
+          "NOMA_API_KEY",
+          "GITHUB_USER",
+          "GITPOD_GIT_USER_EMAIL",
+          "CODER_WORKSPACE_OWNER_NAME",
+          "GITHUB_ACTOR",
+          "SUDO_USER",
+          "USER",
+          "USERNAME",
+          "LOGNAME",
+          "COMPUTERNAME",
+          "CODESPACE_NAME",
+          "GITPOD_WORKSPACE_ID",
+          "CODER_WORKSPACE_NAME",
+          "RUNNER_NAME",
+          "HOSTNAME",
+          "HOST",
+          "NAME"
+        ]
+      }
+    ]
+  }
+}
