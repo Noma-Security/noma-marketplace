@@ -1,0 +1,7 @@
+{
+  "name": "guardrails-http",
+  "description": "Noma AIDR guardrails for GitHub Copilot over HTTP hooks, with no script on the endpoint",
+  "version": "0.1.0",
+  "author": { "name": "Noma Security" },
+  "hooks": "./hooks/hooks.json"
+}
