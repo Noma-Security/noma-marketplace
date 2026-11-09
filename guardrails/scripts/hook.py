@@ -32,7 +32,7 @@ from mcp_discovery import discover_claude_code
 # agent-agnostic.
 KEYCHAIN_SERVICE = "noma-guardrails"
 # equals .version in .claude-plugin/plugin.json; CI enforces it
-HOOK_VERSION = "2.6.0"
+HOOK_VERSION = "2.6.1"
 HOOKS_PATH = "/claude/v1/hooks"
 HOOKS_PATH_V2 = "/claude/v2/hooks"
 DEBUG_LOG_FILENAME = "claude-code-guardrails-debug.log"

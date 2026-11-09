@@ -7,7 +7,8 @@
             "type": "command",
             "command": "uv",
             "args": ["run", "--no-project", "${CLAUDE_PLUGIN_ROOT}/scripts/hook.py"],
-            "timeout": 25
+            "timeout": 25,
+            "onFailure": "continue"
           }
         ]
       }
@@ -19,7 +20,8 @@
             "type": "command",
             "command": "uv",
             "args": ["run", "--no-project", "${CLAUDE_PLUGIN_ROOT}/scripts/hook.py"],
-            "timeout": 25
+            "timeout": 25,
+            "onFailure": "continue"
           }
         ]
       }
@@ -31,7 +33,8 @@
             "type": "command",
             "command": "uv",
             "args": ["run", "--no-project", "${CLAUDE_PLUGIN_ROOT}/scripts/hook.py"],
-            "timeout": 25
+            "timeout": 25,
+            "onFailure": "continue"
           }
         ]
       }
@@ -43,7 +46,8 @@
             "type": "command",
             "command": "uv",
             "args": ["run", "--no-project", "${CLAUDE_PLUGIN_ROOT}/scripts/hook.py"],
-            "timeout": 25
+            "timeout": 25,
+            "onFailure": "continue"
           }
         ]
       }
@@ -55,7 +59,8 @@
             "type": "command",
             "command": "uv",
             "args": ["run", "--no-project", "${CLAUDE_PLUGIN_ROOT}/scripts/hook.py"],
-            "timeout": 25
+            "timeout": 25,
+            "onFailure": "continue"
           }
         ]
       }
