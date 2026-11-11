@@ -29,7 +29,7 @@ from codex_mcp_discovery import CODEX_CONFIG_FILENAME, _codex_home, _system_conf
 
 KEYCHAIN_SERVICE = "noma-guardrails"
 # equals .version in .codex-plugin/plugin.json; CI enforces it
-HOOK_VERSION = "2.5.0"
+HOOK_VERSION = "2.6.0"
 HOOKS_PATH = "/codex/v1/hooks"
 HOOKS_PATH_V2 = "/codex/v2/hooks"
 DEBUG_LOG_FILENAME = "codex-guardrails-debug.log"
@@ -215,7 +215,7 @@ def add_mcp_artifacts(event):
 
 
 def main():
-    api_key, key_scope = credentials.resolve_api_key(KEYCHAIN_SERVICE)
+    api_key, key_scope = credentials.resolve_api_key(KEYCHAIN_SERVICE, NOMA_API_URL)
     if not api_key:
         debug.log("no API key resolved; nothing to send")
         return 0

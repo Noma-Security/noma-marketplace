@@ -22,7 +22,7 @@ from copilot_mcp_discovery import copilot_home, discover_copilot
 
 KEYCHAIN_SERVICE = "noma-guardrails"
 # equals .version in .plugin/plugin.json; CI enforces it
-HOOK_VERSION = "1.4.0"
+HOOK_VERSION = "1.5.0"
 HOOKS_PATH = "/github-copilot/v1/hooks"
 HOOKS_PATH_V2 = "/github-copilot/v2/hooks"
 DEBUG_LOG_FILENAME = "copilot-guardrails-debug.log"
@@ -165,7 +165,7 @@ def enrich(event):
 
 
 def main():
-    api_key, key_scope = credentials.resolve_api_key(KEYCHAIN_SERVICE)
+    api_key, key_scope = credentials.resolve_api_key(KEYCHAIN_SERVICE, NOMA_API_URL)
     if not api_key:
         debug.log("no API key resolved; nothing to send")
         return 0

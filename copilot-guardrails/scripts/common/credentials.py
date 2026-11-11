@@ -1,9 +1,10 @@
 """API-key resolution from the environment, the MDM certificate, or the OS
 credential store.
 
-``resolve_api_key(service)`` prefers the NOMA_API_KEY environment variable, then
-the per-endpoint token the MDM discovery script left in user scope, then the MDM
-discovery ingestion certificate, then the per-user credential store:
+``resolve_api_key(service, api_url)`` prefers the NOMA_API_KEY environment variable, then
+the customer broker key from the MDM certificate (only when api_url, the URL the hook
+sends to, is a non-Noma host), then the per-endpoint token the MDM discovery script left in
+user scope, then the MDM discovery ingestion certificate, then the per-user credential store:
 macOS Keychain (``security``), Linux libsecret / GNOME Keyring (``secret-tool``),
 or Windows Credential Manager (``advapi32.CredReadW``). The store is keyed by the
 caller-supplied ``service`` name (the guardrails hook passes "noma-guardrails").
@@ -19,8 +20,10 @@ OS-portable, stdlib only, no f-strings/annotations - runs on any python3.
 import enum
 import getpass
 import os
+import re
 import subprocess
 import sys
+from urllib.parse import urlparse
 
 from . import debug
 from . import endpoint_token
@@ -30,6 +33,7 @@ class KeyScope(enum.Enum):
     """Which source resolved the transport credential."""
     NONE = "none"
     ENV = "env"
+    BROKER_KEY = "broker_key"
     ENDPOINT_TOKEN = "endpoint_token"
     DATA_COLLECTOR_KEY = "data_collector_key"
     ACCESS_TOKEN = "access_token"
@@ -41,6 +45,16 @@ MDM_CERT_CN = "Noma MDM Ingestion Key"
 MDM_KEY_SCHEME = "x-noma-key"
 _MDM_KEY_RE_BODY = MDM_KEY_SCHEME + ":[A-Za-z0-9+/=]+"
 _MDM_KEY_RE = MDM_KEY_SCHEME + ":([A-Za-z0-9+/=]+)"
+
+# Second SAN entry; _MDM_KEY_RE cannot match it, so older readers still find only the ingestion key.
+MDM_BROKER_KEY_SCHEME = "x-noma-broker-key"
+_BROKER_KEY_CHARSET = "[A-Za-z0-9._~+/=-]"
+_MDM_ENTRY_RE_BODY = ("(" + _MDM_KEY_RE_BODY + "|" + MDM_BROKER_KEY_SCHEME + ":" +
+                      _BROKER_KEY_CHARSET + "+)([, ]|$)")
+_MDM_ENTRY_RE = ("(" + MDM_KEY_SCHEME + "|" + MDM_BROKER_KEY_SCHEME + "):(" +
+                 _BROKER_KEY_CHARSET + r"+)(?=[,\s]|$)")
+_BROKER_KEY_VALID_RE = re.compile("^" + _BROKER_KEY_CHARSET + "{16,512}" + r"\Z")
+_NOMA_HOST = "noma.security"
 
 
 def current_user():
@@ -175,26 +189,26 @@ def _from_store(service):
 
 # --- MDM discovery ingestion certificate --------------------------------------
 
-_MACOS_CERT_SH = """noma_cert_key() {
+_MACOS_CERT_SH = """noma_cert_keys() {
   [ -f "$1" ] || return 0
   /usr/bin/security find-certificate -c '%s' -p "$1" 2>/dev/null \\
     | /usr/bin/openssl x509 -noout -text 2>/dev/null \\
-    | grep -Eo 'URI:%s' | head -n1 | sed 's#^URI:%s:##'
+    | grep -Eo 'URI:%s' | sed 's#^URI:##; s#[, ]$##; s#:#=#'
 }
-noma_key=$(noma_cert_key /Library/Keychains/System.keychain)
-if [ -z "$noma_key" ]; then
-  noma_key=$(noma_cert_key "${HOME:-/var/root}/Library/Keychains/login.keychain-db")
+noma_keys=$(noma_cert_keys /Library/Keychains/System.keychain)
+if [ -z "$noma_keys" ]; then
+  noma_keys=$(noma_cert_keys "${HOME:-/var/root}/Library/Keychains/login.keychain-db")
 fi
-printf '%%s' "$noma_key\"""" % (
-    MDM_CERT_CN, _MDM_KEY_RE_BODY, MDM_KEY_SCHEME)
+printf '%%s' "$noma_keys\"""" % (
+    MDM_CERT_CN, _MDM_ENTRY_RE_BODY)
 
 
-def _macos_ingestion_key():
-    """The ingestion key from the deployed keychain cert (System, then login); "" if absent."""
+def _macos_cert_keys():
+    """"scheme=value" lines for the entries on the deployed keychain cert (System, then login); "" if absent."""
     return _run(["/bin/sh", "-c", _MACOS_CERT_SH])
 
 
-_WINDOWS_CERT_PS = """$NomaIngestionKey = $null
+_WINDOWS_CERT_PS = """$NomaKeys = @()
 foreach ($nomaLocation in @('LocalMachine', 'CurrentUser')) {
 foreach ($nomaStoreName in @('Root', 'My')) {
     $nomaStore = [System.Security.Cryptography.X509Certificates.X509Store]::new($nomaStoreName, [System.Security.Cryptography.X509Certificates.StoreLocation]::$nomaLocation)
@@ -205,17 +219,19 @@ foreach ($nomaStoreName in @('Root', 'My')) {
             if ($nomaCert.GetNameInfo([System.Security.Cryptography.X509Certificates.X509NameType]::SimpleName, $false) -ne "%s") { continue }
             $nomaSan = $nomaCert.Extensions | Where-Object { $_.Oid.Value -eq '2.5.29.17' } | Select-Object -First 1
             if (-not $nomaSan) { continue }
-            $nomaMatch = [regex]::Match($nomaSan.Format($true), '%s')
-            if ($nomaMatch.Success) { $NomaIngestionKey = $nomaMatch.Groups[1].Value; break }
+            foreach ($nomaMatch in [regex]::Matches($nomaSan.Format($true), '%s')) {
+                $NomaKeys += ($nomaMatch.Groups[1].Value + '=' + $nomaMatch.Groups[2].Value)
+            }
+            if ($NomaKeys.Count -gt 0) { break }
         }
     } finally {
         $nomaStore.Close()
     }
-    if ($NomaIngestionKey) { break }
+    if ($NomaKeys.Count -gt 0) { break }
 }
-if ($NomaIngestionKey) { break }
+if ($NomaKeys.Count -gt 0) { break }
 }
-if ($NomaIngestionKey) { Write-Output $NomaIngestionKey }""" % (MDM_CERT_CN, _MDM_KEY_RE)
+if ($NomaKeys.Count -gt 0) { Write-Output $NomaKeys }""" % (MDM_CERT_CN, _MDM_ENTRY_RE)
 
 
 def _windows_powershell():
@@ -230,46 +246,87 @@ def _windows_powershell():
     return ""
 
 
-def _windows_ingestion_key():
-    """The ingestion key from the deployed cert (LocalMachine, then CurrentUser); "" if absent."""
+def _windows_cert_keys():
+    """"scheme=value" lines for the entries on the deployed cert (LocalMachine, then CurrentUser); "" if absent."""
     powershell = _windows_powershell()
     if not powershell:
-        debug.log("Windows PowerShell not found; no ingestion key from the certificate store")
+        debug.log("Windows PowerShell not found; no keys from the certificate store")
         return ""
     return _run([powershell, "-NoProfile", "-NonInteractive", "-Command", _WINDOWS_CERT_PS])
 
 
-def resolve_ingestion_key():
-    """The MDM discovery ingestion key from the OS certificate store; "" if unresolved."""
+def valid_broker_key(key):
+    return bool(_BROKER_KEY_VALID_RE.match(key)) and not key.startswith("//")
+
+
+def resolve_mdm_cert_keys():
+    """(ingestion_key, broker_key) from one certificate read; "" when absent or malformed."""
     plat = sys.platform  # via a local so static analysis doesn't prune branches
     if plat == "win32":
-        key = _windows_ingestion_key()
+        output = _windows_cert_keys()
     elif plat == "darwin":
-        key = _macos_ingestion_key()
+        output = _macos_cert_keys()
     else:
         debug.log("no MDM ingestion certificate source on platform=" + plat)
-        return ""
+        return "", ""
+    entries = {}
+    for line in output.splitlines():
+        scheme, _, value = line.strip().partition("=")
+        if scheme not in entries:
+            entries[scheme] = value
+    ingestion_key = entries.get(MDM_KEY_SCHEME, "")
+    broker_key = entries.get(MDM_BROKER_KEY_SCHEME, "")
+    if broker_key and not valid_broker_key(broker_key):
+        debug.log("MDM certificate broker key rejected: not a valid key")
+        broker_key = ""
     debug.log("MDM ingestion certificate " +
-              ("returned a key" if key else "returned nothing"))
-    return key
+              ("returned an ingestion key" if ingestion_key else "returned no ingestion key") +
+              (" and a broker key" if broker_key else " and no broker key"))
+    return ingestion_key, broker_key
 
 
-def resolve_api_key(service=None):
-    """(key, key_scope): NOMA_API_KEY env wins, then the per-endpoint token, then
-    the MDM ingestion key, then the OS credential store; ("", KeyScope.NONE) when
-    nothing resolves.
+def resolve_ingestion_key():
+    """The MDM discovery ingestion key from the OS certificate store; "" if unresolved."""
+    return resolve_mdm_cert_keys()[0]
+
+
+def _is_custom_broker_url(api_url):
+    """True only for a non-Noma api_url host, so the broker key never reaches Noma; unparseable is False."""
+    if not api_url:
+        return False
+    try:
+        host = (urlparse(api_url).hostname or "").rstrip(".")
+    except ValueError:
+        return False
+    return bool(host) and host != _NOMA_HOST and not host.endswith("." + _NOMA_HOST)
+
+
+def resolve_api_key(service=None, api_url=None):
+    """(key, key_scope): NOMA_API_KEY env wins, then the MDM broker key (only when
+    api_url is a custom non-Noma host), then the per-endpoint token, then the MDM
+    ingestion key, then the OS credential store; ("", KeyScope.NONE) when nothing
+    resolves.
 
     `service` is the credential-store key, supplied by the caller so this module
     stays generic (the guardrails hook passes "noma-guardrails"); without one the
-    store is skipped, for a hook whose route takes no API key."""
+    store is skipped, for a hook whose route takes no API key.
+
+    `api_url` must be the URL the hook posts to (transport.api_url()), not raw
+    NOMA_API_URL: transport can ignore an env URL, and the key must follow the URL used."""
     key = os.environ.get("NOMA_API_KEY")
     if key:
         debug.log("API key resolved from NOMA_API_KEY env/settings")
         return key, KeyScope.ENV
+    cert_ingestion_key = None
+    if _is_custom_broker_url(api_url):
+        cert_ingestion_key, broker_key = resolve_mdm_cert_keys()
+        if broker_key:
+            debug.log("credential: MDM certificate broker key (custom NOMA_API_URL host)")
+            return broker_key, KeyScope.BROKER_KEY
     key = endpoint_token.read_token()
     if key:
         return key, KeyScope.ENDPOINT_TOKEN
-    key = resolve_ingestion_key()
+    key = resolve_ingestion_key() if cert_ingestion_key is None else cert_ingestion_key
     if key:
         return key, KeyScope.DATA_COLLECTOR_KEY
     if not service:

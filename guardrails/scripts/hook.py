@@ -32,7 +32,7 @@ from mcp_discovery import discover_claude_code
 # agent-agnostic.
 KEYCHAIN_SERVICE = "noma-guardrails"
 # equals .version in .claude-plugin/plugin.json; CI enforces it
-HOOK_VERSION = "2.6.1"
+HOOK_VERSION = "2.7.0"
 HOOKS_PATH = "/claude/v1/hooks"
 HOOKS_PATH_V2 = "/claude/v2/hooks"
 DEBUG_LOG_FILENAME = "claude-code-guardrails-debug.log"
@@ -65,7 +65,7 @@ def enrich(payload):
 
 
 def main():
-    api_key, key_scope = credentials.resolve_api_key(KEYCHAIN_SERVICE)
+    api_key, key_scope = credentials.resolve_api_key(KEYCHAIN_SERVICE, NOMA_API_URL)
     if not api_key:
         # Degrade quietly: with no key there's nothing to send, and a hook must
         # never surface an error in the user's session. Do nothing, exit clean.

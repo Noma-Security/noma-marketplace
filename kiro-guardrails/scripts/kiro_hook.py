@@ -33,8 +33,8 @@ from kiro_mcp_discovery import discover_kiro, kiro_home
 
 
 # equals .version in .plugin/plugin.json; CI enforces it
-HOOK_VERSION = "1.1.0"
-# Kiro has one route: the gateway takes the ingestion key (bare) or the per-endpoint JWT (Bearer) on it.
+HOOK_VERSION = "1.2.0"
+# Kiro has one route: it takes the ingestion key (bare), or the per-endpoint JWT or MDM broker key (Bearer).
 HOOKS_PATH = "/kiro/v1/hooks"
 DEBUG_LOG_FILENAME = "kiro-guardrails-debug.log"
 # Branded before the import-time config load so its debug lines land in this hook's log.
@@ -398,10 +398,11 @@ def apply_decision(event_name, reply):
 
 
 def resolve_credential():
-    """(key, scheme) for HOOKS_PATH: the per-endpoint token as Bearer, NOMA_API_KEY and the MDM ingestion
-    certificate bare. No credential-store service: its API key needs an access-token route Kiro lacks."""
-    key, key_scope = credentials.resolve_api_key()
-    if key_scope == credentials.KeyScope.ENDPOINT_TOKEN:
+    """(key, scheme) for HOOKS_PATH: the per-endpoint token and the MDM broker key as Bearer, NOMA_API_KEY
+    and the MDM ingestion certificate bare. No credential-store service: its API key needs an access-token
+    route Kiro lacks."""
+    key, key_scope = credentials.resolve_api_key(api_url=NOMA_API_URL)
+    if key_scope in (credentials.KeyScope.ENDPOINT_TOKEN, credentials.KeyScope.BROKER_KEY):
         return key, "Bearer"
     return key, ""
 

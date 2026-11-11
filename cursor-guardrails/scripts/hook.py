@@ -34,7 +34,7 @@ from cursor_mcp_discovery import discover_cursor
 # one stored key serves both.
 KEYCHAIN_SERVICE = "noma-guardrails"
 # equals .version in .cursor-plugin/plugin.json; CI enforces it
-HOOK_VERSION = "1.5.0"
+HOOK_VERSION = "1.6.0"
 HOOKS_PATH = "/cursor/v1/hooks"
 HOOKS_PATH_V2 = "/cursor/v2/hooks"
 DEBUG_LOG_FILENAME = "cursor-guardrails-debug.log"
@@ -61,7 +61,7 @@ def attach_mcp_inventory(event, home):
 
 
 def main():
-    api_key, key_scope = credentials.resolve_api_key(KEYCHAIN_SERVICE)
+    api_key, key_scope = credentials.resolve_api_key(KEYCHAIN_SERVICE, NOMA_API_URL)
     if not api_key:
         # Degrade quietly: with no key there's nothing to send, and a hook must
         # never surface an error in the user's session. Do nothing, exit clean.
