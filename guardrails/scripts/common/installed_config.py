@@ -16,7 +16,10 @@ the process wins, so the file is a default; a blank one counts as unset, matchin
 hooks' ``os.environ.get(...) or default`` fallbacks. CONFIG_WINS names in a trusted file
 are the exception: it overrides the process for them, because an agent's project settings
 (a repo's .claude/settings.json "env") reach the hook process and must not redirect hook
-traffic. Trusted means the admin-owned machine file, or the file next to the running hook
+traffic, swap the key or stop the sending. On a managed install (the hook runs from a
+<noma>/guardrails dir) env_value() also ignores a CONFIG_WINS name the trusted file did not set;
+a standalone plugin install keeps honoring it. Trusted means the admin-owned machine file, or
+the file next to the running hook
 (installed_path(): <guardrails>/<agent>/scripts/common/ -> <guardrails>/config.json, how the MDM
 lays out both scopes) when the user or an admin owns it. The user path found through HOME /
 LOCALAPPDATA is never trusted: the same project settings can point it at a file of their own.
@@ -33,7 +36,7 @@ from . import debug, engine
 
 CONFIG_FILENAME = "config.json"
 MAX_CONFIG_BYTES = 64 * 1024
-CONFIG_WINS = ("NOMA_API_URL",)
+CONFIG_WINS = ("NOMA_API_URL", "NOMA_API_KEY", "NOMA_DRYRUN")
 _WIN_LOCAL_SYSTEM_SID = 22  # WELL_KNOWN_SID_TYPE WinLocalSystemSid
 _WIN_BUILTIN_ADMINISTRATORS_SID = 26  # WinBuiltinAdministratorsSid
 _configured = {}
@@ -48,6 +51,26 @@ def installed_path():
     """config.json of the guardrails dir this runtime runs from; found from __file__, never from env."""
     here = os.path.dirname(os.path.abspath(__file__))
     return os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(here))), CONFIG_FILENAME)
+
+
+def managed_install():
+    """True when this runtime runs from an MDM guardrails dir (<noma>/guardrails/<agent>/scripts/), judged from __file__.
+    Matches the parent of the noma dir too: Claude Code's cache (plugins/cache/noma/guardrails/<version>/) has the same names."""
+    parts = installed_path().replace("\\", "/").lower().split("/")[:-1]
+    return len(parts) >= 3 and parts[-1] == "guardrails" and \
+        (parts[-2] == ".noma" or (parts[-2] == "noma" and parts[-3] in ("local", "programdata")))
+
+
+def env_value(name):
+    """(os.environ[name], True when a trusted config set that value). On a managed install a CONFIG_WINS name
+    the trusted config did not set reads as unset: an agent's project settings inject env and must not
+    redirect the hooks, swap the key or stop the sending."""
+    value = os.environ.get(name)
+    from_config = bool(value) and value == configured(name)
+    if value and not from_config and name in CONFIG_WINS and managed_install():
+        debug.log(name + " ignored: set outside the managed config")
+        return None, False
+    return value, from_config
 
 
 def config_paths():

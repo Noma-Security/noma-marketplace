@@ -45,11 +45,13 @@ def _allowed_api_url(url):
 
 def api_url():
     """NOMA_API_URL when the installed config set it or it is allowed (_allowed_api_url), else
-    the default: a repo's agent settings can inject env, and must not redirect the hooks' key and events."""
-    url = os.environ.get("NOMA_API_URL") or DEFAULT_API_URL
-    if url == installed_config.configured("NOMA_API_URL") or _allowed_api_url(url):
+    the default: a repo's agent settings can inject env, and must not redirect the hooks' key and events.
+    On a managed install only the trusted config can set it (installed_config.env_value)."""
+    value, from_config = installed_config.env_value("NOMA_API_URL")
+    url = value or DEFAULT_API_URL
+    if from_config or _allowed_api_url(url):
         return url
-    debug.log("NOMA_API_URL ignored: not a Noma or loopback host; using " + DEFAULT_API_URL)
+    debug.log("NOMA_API_URL ignored: not an allowed host; using " + DEFAULT_API_URL)
     return DEFAULT_API_URL
 
 
@@ -84,7 +86,7 @@ def post(payload_str, api_key, api_url, hooks_path, scheme="Bearer", on_response
     elif override:
         debug.log("NOMA_HOOKS_PATH ignored: not a plain URL path")
     url = api_url.rstrip("/") + hooks_path
-    if os.environ.get("NOMA_DRYRUN"):
+    if installed_config.env_value("NOMA_DRYRUN")[0]:
         debug.log("DRY-RUN would POST to " + url + " (" + str(len(payload_str)) + " bytes)")
         sys.stdout.write(payload_str + "\n")
         return 0

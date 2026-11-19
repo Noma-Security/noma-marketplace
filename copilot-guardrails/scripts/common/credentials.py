@@ -27,6 +27,7 @@ from urllib.parse import urlparse
 
 from . import debug
 from . import endpoint_token
+from . import installed_config
 
 
 class KeyScope(enum.Enum):
@@ -313,7 +314,7 @@ def resolve_api_key(service=None, api_url=None):
 
     `api_url` must be the URL the hook posts to (transport.api_url()), not raw
     NOMA_API_URL: transport can ignore an env URL, and the key must follow the URL used."""
-    key = os.environ.get("NOMA_API_KEY")
+    key, _ = installed_config.env_value("NOMA_API_KEY")
     if key:
         debug.log("API key resolved from NOMA_API_KEY env/settings")
         return key, KeyScope.ENV
