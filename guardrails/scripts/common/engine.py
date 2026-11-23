@@ -6,9 +6,11 @@ returning a list of ``(scope, kind, path, content)`` candidates; the core drops
 empty content and emits the rest. Stdlib only.
 """
 
+import codecs
 import json
 import os
 import socket
+import stat
 import sys
 
 from . import debug
@@ -40,6 +42,27 @@ def read_json(path, max_bytes=None):
         return None
     debug.log("read_json ok " + str(path))
     return obj
+
+
+def read_text_file(path, max_bytes):
+    """The first max_bytes of the file at path as text, or None if it can't be read."""
+    if not isinstance(path, str) or not path:
+        return None
+    try:
+        # O_NONBLOCK so a FIFO swapped in for the file can't block open(); the type check is on the open fd.
+        fd = os.open(path, os.O_RDONLY | getattr(os, "O_NONBLOCK", 0) | getattr(os, "O_BINARY", 0))
+        with os.fdopen(fd, "rb") as handle:
+            if not stat.S_ISREG(os.fstat(handle.fileno()).st_mode):
+                debug.log("read_text_file not a regular file " + path)
+                return None
+            data = handle.read(max_bytes + 1)
+        truncated = len(data) > max_bytes
+        encoding = "utf-16" if data[:2] in (codecs.BOM_UTF16_LE, codecs.BOM_UTF16_BE) else "utf-8-sig"
+        # final=False on a cut read drops a character split at the cap instead of appending U+FFFD.
+        return codecs.getincrementaldecoder(encoding)("replace").decode(data[:max_bytes], final=not truncated)
+    except Exception as e:
+        debug.exc("read_text_file " + path, e)
+        return None
 
 
 def file_exists(path):

@@ -15,6 +15,7 @@ With coding-agent hooks enabled, Noma acts as a security gatekeeper for the foll
 - **Claude Code MCP server inventory** (all platforms): On every prompt, sends the MCP server configuration files. Only server identity fields (`type`, `url`, `command`, `args`) are sent per server, with secret-looking values masked — `env`, `headers`, and all other fields never leave your machine. The hook is built with dependency-free Python (standard library only) and runs via `uv`, so it behaves identically on macOS, Linux, and Windows
 - **File reads**: Protects sensitive local data (e.g., `.env` files, SSH keys) from being indexed or sent to the LLM
 - **User prompt submission**: Scans and filters sensitive data, PCI, PII, PHI before it leaves your local environment
+- **Slash commands and instruction files**: Records each typed slash command as it expands, and the contents of every instruction file Claude Code loads into context (`CLAUDE.md`, `.claude/rules/*.md`, and files they `@`-import), sending the file content to Noma (when Claude Code does not include the content, the hook reads the first 256 KiB of the file itself). These are recorded for analysis only: they are not scanned, never blocked, and do not appear on the session page
 
 ### ASK Confirmation
 
@@ -28,7 +29,7 @@ A BLOCK policy on `PostToolUse` also replaces the string values of the tool resu
 
 ## Prerequisites
 
-- **Claude Code v2.0.12+**: ASK is best-effort before v2.1.211; reliable ASK prompting in auto mode requires v2.1.211+. `PostToolUse` masking and block result replacement require v2.1.121+ (`updatedToolOutput`); older versions ignore the rewrite
+- **Claude Code v2.1.139+**: the hooks use the exec-form `args` field added in v2.1.139. ASK is best-effort before v2.1.211; reliable ASK prompting in auto mode requires v2.1.211+. `PostToolUse` masking and block result replacement require v2.1.121+ (`updatedToolOutput`); older versions ignore the rewrite
 - **Noma API Key**: Request an API Key for this plugin from your Noma Technical Account manager (Note: This is not an API Key that you create within the Noma Console)
 - **Supported OS**: macOS, Linux, or Windows — one plugin, identical behavior on all three
 - **[`uv`](https://docs.astral.sh/uv/)**: the hooks run via `uv` (Astral's Python runner), which supplies the Python the hook needs — no system `python3` or `pip` packages required. `uv` must be on the `PATH` of the environment that launches the hooks

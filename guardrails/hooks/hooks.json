@@ -64,6 +64,30 @@
           }
         ]
       }
+    ],
+    "UserPromptExpansion": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "uv",
+            "args": ["run", "--no-project", "${CLAUDE_PLUGIN_ROOT}/scripts/hook.py"],
+            "timeout": 25
+          }
+        ]
+      }
+    ],
+    "InstructionsLoaded": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "uv",
+            "args": ["run", "--no-project", "${CLAUDE_PLUGIN_ROOT}/scripts/hook.py"],
+            "timeout": 25
+          }
+        ]
+      }
     ]
   }
 }

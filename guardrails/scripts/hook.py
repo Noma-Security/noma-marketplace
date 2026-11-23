@@ -32,10 +32,11 @@ from mcp_discovery import discover_claude_code
 # agent-agnostic.
 KEYCHAIN_SERVICE = "noma-guardrails"
 # equals .version in .claude-plugin/plugin.json; CI enforces it
-HOOK_VERSION = "2.8.0"
+HOOK_VERSION = "2.9.0"
 HOOKS_PATH = "/claude/v1/hooks"
 HOOKS_PATH_V2 = "/claude/v2/hooks"
 DEBUG_LOG_FILENAME = "claude-code-guardrails-debug.log"
+MAX_INSTRUCTIONS_BYTES = 256 * 1024
 # Branded before the import-time config load so its debug lines land in this hook's log.
 debug.set_log_filename(DEBUG_LOG_FILENAME)
 installed_config.apply_installed_env()
@@ -89,6 +90,12 @@ def main():
     if event is not None and event.get("cursor_version"):
         debug.log("event " + str(event.get("hook_event_name")) + " from Cursor; skipped")
         return 0
+
+    if (event is not None and event.get("hook_event_name") == "InstructionsLoaded"
+            and event.get("file_content") is None):
+        content = engine.read_text_file(event.get("file_path"), MAX_INSTRUCTIONS_BYTES)
+        if content is not None:
+            event["file_content"] = content
 
     if event is not None and event.get("hook_event_name") == "UserPromptSubmit":
         # Augment the prompt event with the per-scope MCP inventory. The engine
