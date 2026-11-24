@@ -101,6 +101,10 @@ def read_token():
     try:
         with open(path, "rb") as handle:
             raw = handle.read(_MAX_FILE_BYTES + 1)
+    except FileNotFoundError:
+        # Expected wherever the script wrote no token; the caller falls back to the MDM certificate.
+        debug.log("no endpoint token file at " + path)
+        return ""
     except Exception as e:
         debug.exc("endpoint token read " + path, e)
         return ""

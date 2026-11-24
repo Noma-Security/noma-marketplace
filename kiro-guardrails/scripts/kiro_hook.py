@@ -33,7 +33,7 @@ from kiro_mcp_discovery import discover_kiro, kiro_home
 
 
 # equals .version in .plugin/plugin.json; CI enforces it
-HOOK_VERSION = "1.3.1"
+HOOK_VERSION = "1.3.2"
 # Kiro has one route: it takes the ingestion key (bare), or the per-endpoint JWT or MDM broker key (Bearer).
 HOOKS_PATH = "/kiro/v1/hooks"
 DEBUG_LOG_FILENAME = "kiro-guardrails-debug.log"
