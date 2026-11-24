@@ -16,6 +16,7 @@ With coding-agent hooks enabled, Noma acts as a security gatekeeper for the foll
 - **File reads**: Protects sensitive local data (e.g., `.env` files, SSH keys) from being indexed or sent to the LLM
 - **User prompt submission**: Scans and filters sensitive data, PCI, PII, PHI before it leaves your local environment
 - **Slash commands and instruction files**: Records each typed slash command as it expands, and the contents of every instruction file Claude Code loads into context (`CLAUDE.md`, `.claude/rules/*.md`, and files they `@`-import), sending the file content to Noma (when Claude Code does not include the content, the hook reads the first 256 KiB of the file itself). These are recorded for analysis only: they are not scanned, never blocked, and do not appear on the session page
+- **Model base URL**: When Claude Code is configured with a custom base URL, every event carries it (`llm_base_url`): the `ANTHROPIC_*_BASE_URL` environment variable of the provider the `CLAUDE_CODE_USE_*` flags select. Nothing is sent when no base URL is set. Credentials and query strings are stripped from the URL, and secret-looking parts of the host or path are masked
 
 ### ASK Confirmation
 

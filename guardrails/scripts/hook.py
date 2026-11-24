@@ -19,12 +19,13 @@ common package carries the same constraint; see common/).
 import json
 import os
 import sys
+from urllib.parse import urlsplit
 
 try:
-    from common import installed_config, engine, credentials, transport, debug
+    from common import installed_config, engine, credentials, transport, debug, redaction
 except ImportError:
     sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-    from common import installed_config, engine, credentials, transport, debug
+    from common import installed_config, engine, credentials, transport, debug, redaction
 
 from mcp_discovery import discover_claude_code
 
@@ -32,7 +33,7 @@ from mcp_discovery import discover_claude_code
 # agent-agnostic.
 KEYCHAIN_SERVICE = "noma-guardrails"
 # equals .version in .claude-plugin/plugin.json; CI enforces it
-HOOK_VERSION = "2.9.1"
+HOOK_VERSION = "2.10.0"
 HOOKS_PATH = "/claude/v1/hooks"
 HOOKS_PATH_V2 = "/claude/v2/hooks"
 DEBUG_LOG_FILENAME = "claude-code-guardrails-debug.log"
@@ -41,6 +42,17 @@ MAX_INSTRUCTIONS_BYTES = 256 * 1024
 debug.set_log_filename(DEBUG_LOG_FILENAME)
 installed_config.apply_installed_env()
 NOMA_API_URL = transport.api_url()
+# Claude Code picks its LLM provider from the CLAUDE_CODE_USE_* flags alone, in this
+# order, and each provider reads only its own base-URL variable (verified on 2.1.310).
+LLM_BASE_URL_VARS = (
+    ("CLAUDE_CODE_USE_BEDROCK", "ANTHROPIC_BEDROCK_BASE_URL"),
+    ("CLAUDE_CODE_USE_FOUNDRY", "ANTHROPIC_FOUNDRY_BASE_URL"),
+    ("CLAUDE_CODE_USE_ANTHROPIC_AWS", "ANTHROPIC_AWS_BASE_URL"),
+    ("CLAUDE_CODE_USE_ANTHROPIC_GOOGLE_CLOUD", "ANTHROPIC_GOOGLE_CLOUD_BASE_URL"),
+    ("CLAUDE_CODE_USE_MANTLE", "ANTHROPIC_BEDROCK_MANTLE_BASE_URL"),
+    ("CLAUDE_CODE_USE_VERTEX", "ANTHROPIC_VERTEX_BASE_URL"),
+)
+ENV_TRUTHY = ("1", "true", "yes", "on")
 
 
 def account_email():
@@ -55,6 +67,54 @@ def account_email():
     account = doc.get("oauthAccount") if isinstance(doc, dict) else None
     email = account.get("emailAddress") if isinstance(account, dict) else None
     return email if isinstance(email, str) else ""
+
+
+def llm_base_url(env=None):
+    """Base URL Claude Code is configured to call, or "" when none is set and it calls
+    its provider's default host.
+
+    Read from the environment on every event: the settings `env` block lands there and
+    an edit applies mid-session."""
+    env = os.environ if env is None else env
+    url_var = "ANTHROPIC_BASE_URL"
+    for flag, var in LLM_BASE_URL_VARS:
+        if (env.get(flag) or "").strip().lower() in ENV_TRUTHY:
+            url_var = var
+            break
+    return env.get(url_var) or ""
+
+
+def clean_url(url):
+    """scheme://host[:port]/path of a URL, or "". Userinfo, query and fragment are
+    dropped and secret-looking substrings masked: a configured base URL can carry
+    credentials in any of them."""
+    try:
+        parts = urlsplit(url.strip())
+        # .port raises on a non-numeric port, where a mangled URL
+        # (https://user:secret/x@host) would otherwise carry the password.
+        host, port = parts.hostname, parts.port
+        if not parts.scheme or not host:
+            return ""
+        if ":" in host:
+            host = "[" + host + "]"
+        if port is not None:
+            host += ":" + str(port)
+        return redaction.sanitize_str(parts.scheme + "://" + host + parts.path)
+    except Exception as e:
+        debug.exc("clean_url", e)
+        return ""
+
+
+def add_llm_base_url(event):
+    """Add llm_base_url to the event, best-effort: an unset URL is omitted and a
+    failure adds nothing."""
+    try:
+        url = clean_url(llm_base_url())
+    except Exception as e:
+        debug.exc("llm base url", e)
+        return
+    if url:
+        event["llm_base_url"] = url
 
 
 def enrich(payload):
@@ -82,6 +142,7 @@ def main():
         if isinstance(parsed, dict):
             event = parsed
             event["hook_version"] = HOOK_VERSION
+            add_llm_base_url(event)
     except Exception as e:
         debug.exc("stdin JSON parse", e)
         event = None
