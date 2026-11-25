@@ -20,16 +20,18 @@ except ImportError:  # Python < 3.11: the top-level line scan below is the fallb
     tomllib = None
 
 try:
-    from common import installed_config, credentials, debug, engine, transport
+    from common import installed_config, credentials, debug, engine, redaction, transport
 except ImportError:
     sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-    from common import installed_config, credentials, debug, engine, transport
+    from common import installed_config, credentials, debug, engine, redaction, transport
 
-from codex_mcp_discovery import CODEX_CONFIG_FILENAME, _codex_home, _system_config_path, collect_codex_artifacts
+from codex_mcp_discovery import (
+    CODEX_CONFIG_FILENAME, _codex_home, _read_doc, _system_config_path, collect_codex_artifacts,
+)
 
 KEYCHAIN_SERVICE = "noma-guardrails"
 # equals .version in .codex-plugin/plugin.json; CI enforces it
-HOOK_VERSION = "2.7.2"
+HOOK_VERSION = "2.8.0"
 HOOKS_PATH = "/codex/v1/hooks"
 HOOKS_PATH_V2 = "/codex/v2/hooks"
 DEBUG_LOG_FILENAME = "codex-guardrails-debug.log"
@@ -54,6 +56,9 @@ KEYRING_PLATFORMS = ("linux",)
 KEYRING_SERVICE = "Codex Auth"
 CODEX_KEYRING_ACCOUNT_PREFIX = "cli|"
 
+OPENAI_PROVIDER = "openai"
+OSS_PROVIDERS = ("ollama", "lmstudio")
+SESSION_META_MAX_BYTES = 1024 * 1024
 
 def _jwt_claims(token):
     """Unverified payload of a JWT, or None. Verification is not needed: the
@@ -186,6 +191,99 @@ def account_email():
     return email
 
 
+def _session_provider(transcript_path):
+    """The provider id Codex resolved for this session, from session_meta (the rollout's
+    first line), or "". It already reflects requirements, CLI flags and profiles."""
+    if not isinstance(transcript_path, str) or transcript_path == "":
+        return ""
+    try:
+        with open(transcript_path, "rb") as f:
+            line = f.readline(SESSION_META_MAX_BYTES)
+        provider = json.loads(line.decode("utf-8", "replace"))["payload"]["model_provider"]
+    except Exception as e:
+        debug.exc("session_meta read", e)
+        return ""
+    return provider if isinstance(provider, str) else ""
+
+
+def _machine_config_paths():
+    """(system config, managed config, requirements) paths of Codex's machine-wide config.
+
+    MCP discovery's system path is unset on Windows, where Codex reads %ProgramData%\\OpenAI\\Codex,
+    has no managed_config.toml, and lets a policy registry value relocate requirements.toml."""
+    system_config = _system_config_path()
+    if system_config:
+        system_dir = os.path.dirname(system_config)
+        return (system_config, os.path.join(system_dir, "managed_config.toml"),
+                os.path.join(system_dir, "requirements.toml"))
+    system_dir = os.path.join(os.environ.get("ProgramData") or r"C:\ProgramData", "OpenAI", "Codex")
+    requirements = os.path.join(system_dir, "requirements.toml")
+    try:
+        import winreg
+        with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\Policies\OpenAI\Codex", 0,
+                            winreg.KEY_READ | winreg.KEY_WOW64_64KEY) as key:
+            relocated = winreg.QueryValueEx(key, "RequirementsPath")[0]
+        if isinstance(relocated, str) and relocated:
+            requirements = relocated
+    except Exception:
+        pass  # not Windows, or the value is not set
+    return os.path.join(system_dir, CODEX_CONFIG_FILENAME), "", requirements
+
+
+def llm_base_url(event):
+    """Base URL configured for this Codex session, or "" when none is set and Codex
+    calls its provider's built-in endpoint.
+
+    Codex ignores the OPENAI_BASE_URL environment variable; the provider comes from its
+    config layers and the URL from that provider's definition. Later layers win:
+    system config, user config, managed config; requirements.toml pins over all of them
+    (_machine_config_paths has the Windows locations).
+    The files are parsed with tomllib, so Python < 3.11 reports no configured URL.
+    ponytail: --profile files, -c overrides and the macOS MDM config payload are not read;
+    session_meta still names the provider they select."""
+    home = os.environ.get("HOME") or os.path.expanduser("~")
+    codex_home = _codex_home(home)
+    system_config, managed_config, requirements_path = _machine_config_paths()
+    config, providers = {}, {}
+    for path in (system_config, os.path.join(codex_home, CODEX_CONFIG_FILENAME), managed_config):
+        layer = _read_doc(path)[0] or {}
+        if engine.is_object(layer.get("model_providers")):
+            for name, definition in layer["model_providers"].items():
+                # Codex merges a provider's table across layers; requirements replace it.
+                if engine.is_object(definition) and engine.is_object(providers.get(name)):
+                    definition = dict(providers[name], **definition)
+                providers[name] = definition
+        config.update(layer)
+    requirements = _read_doc(requirements_path)[0] or {}
+    if engine.is_object(requirements.get("model_providers")):
+        providers.update(requirements["model_providers"])
+
+    provider = _session_provider(event.get("transcript_path"))
+    for candidate in (requirements.get("model_provider"), config.get("model_provider"), OPENAI_PROVIDER):
+        if not provider and isinstance(candidate, str):
+            provider = candidate
+    if provider == OPENAI_PROVIDER:
+        return config.get("openai_base_url") or ""
+    if provider in OSS_PROVIDERS:
+        # Built in: Codex ignores a config entry with this id and takes the URL from the env.
+        return os.environ.get("CODEX_OSS_BASE_URL") or ""
+    definition = providers.get(provider)
+    url = definition.get("base_url") if engine.is_object(definition) else None
+    return url or ""
+
+
+def add_llm_base_url(event):
+    """Add llm_base_url to the event, best-effort: an unset URL is omitted and a
+    failure adds nothing."""
+    try:
+        url = redaction.clean_url(llm_base_url(event))
+    except Exception as e:
+        debug.exc("llm base url", e)
+        return
+    if url:
+        event["llm_base_url"] = url
+
+
 def _event_cwd(event):
     cwd = event.get("cwd")
     if not isinstance(cwd, str) or cwd == "":
@@ -233,6 +331,9 @@ def main():
     event["hook_version"] = HOOK_VERSION
 
     if event.get("hook_event_name") == "UserPromptSubmit":
+        # Prompt only: resolving it parses the Codex config, and the backend keeps it for
+        # the session's other events.
+        add_llm_base_url(event)
         debug.log("event UserPromptSubmit; building MCP inventory")
         event = add_mcp_artifacts(event)
 

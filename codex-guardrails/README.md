@@ -21,7 +21,7 @@ For more details, visit [noma.security](https://noma.security).
 - A Noma credential: an API key from your Noma Technical Account Manager, or — on macOS/Windows fleets provisioned for Noma MDM discovery — the MDM-deployed ingestion certificate already on the machine (no separate key needed)
 - macOS, Linux, or Windows
 - Python 3.6+ — either the Noma-managed installation (`/usr/local/noma/python` or `~/.noma/python` on macOS/Linux, `C:\Program Files\Noma\python` or `C:\ProgramData\Noma\python` on Windows; deployed by the Noma fleet MDM script) or a `python3`/`python` on the `PATH` of the environment that launches Codex
-- Python 3.11+ for MCP inventory; prompt, tool, and response guardrails continue to work on Python 3.6–3.10
+- Python 3.11+ for MCP inventory and the configured LLM base URL; prompt, tool, and response guardrails continue to work on Python 3.6–3.10
 
 ## Installation
 
@@ -43,6 +43,8 @@ Restart the ChatGPT desktop app, install `guardrails` from the Noma marketplace,
 | `NOMA_DEBUG` | — | Write diagnostics to `~/.noma/codex-guardrails-debug.log` |
 
 The reported `username` is the signed-in ChatGPT account email, read from `$CODEX_HOME/auth.json` or, when `cli_auth_credentials_store` is `keyring`/`auto` in the user or system `config.toml`, from the OS credential store entry Codex writes (Linux only; on macOS and Windows keyring mode falls through to the next source). Without a ChatGPT login it falls back to the global `git config user.email`, then to the OS username.
+
+When Codex is configured with a custom base URL for its model requests, each prompt event carries it (`llm_base_url`), and Noma applies it to the session's other events: `openai_base_url`, or the `base_url` of the session's model provider (`CODEX_OSS_BASE_URL` for a local `--oss` provider), read from the session's rollout and the system, user and managed `config.toml` layers plus `requirements.toml` (on Windows the machine-wide files are `%ProgramData%\OpenAI\Codex\config.toml` and, by default, `requirements.toml` in the same folder; the `RequirementsPath` value under `HKLM\SOFTWARE\Policies\OpenAI\Codex` can point to another requirements file). Nothing is sent when no base URL is set and Codex calls its provider's built-in endpoint. A base URL set only through `--profile`, a `-c` override or the macOS MDM configuration payload is not reported. Credentials and query strings are stripped from the URL, and secret-looking parts of the host or path are masked.
 
 ### Operating system credential store
 

@@ -7,6 +7,9 @@ annotations so it runs on any python3.
 """
 
 import re
+from urllib.parse import urlsplit
+
+from . import debug
 
 REDACTED = "***REDACTED***"
 
@@ -41,6 +44,31 @@ def sanitize_str(s):
     s = _JWT_RE.sub(REDACTED, s)
     s = _URL_USERINFO_RE.sub(lambda m: m.group(1) + REDACTED + "@", s)
     return s
+
+
+def clean_url(url):
+    """scheme://host[:port]/path of a URL, or "". Userinfo, query and fragment are
+    dropped and secret-looking substrings masked: a configured base URL can carry
+    credentials in any of them."""
+    try:
+        parts = urlsplit(url.strip())
+        # A mangled URL (https://user:secret/x@host): urlsplit reads the password as the
+        # port, so no part of it is safe to send.
+        if "@" in parts.path:
+            return ""
+        host, port = parts.hostname, parts.port
+        if not parts.scheme or not host:
+            return ""
+        # An IPv6 host: urlsplit strips its brackets ([::1] -> ::1), the URL needs them back.
+        if ":" in host:
+            host = "[" + host + "]"
+        if port is not None:
+            host += ":" + str(port)
+        return sanitize_str(parts.scheme + "://" + host + parts.path)
+    except Exception as e:
+        # Type only: the ValueError for a bad port quotes it, and it can be a password.
+        debug.log("clean_url: " + type(e).__name__)
+        return ""
 
 
 # A flag is "secret" when its name contains a sensitive keyword; the value that

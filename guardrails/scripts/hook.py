@@ -19,7 +19,6 @@ common package carries the same constraint; see common/).
 import json
 import os
 import sys
-from urllib.parse import urlsplit
 
 try:
     from common import installed_config, engine, credentials, transport, debug, redaction
@@ -33,7 +32,7 @@ from mcp_discovery import discover_claude_code
 # agent-agnostic.
 KEYCHAIN_SERVICE = "noma-guardrails"
 # equals .version in .claude-plugin/plugin.json; CI enforces it
-HOOK_VERSION = "2.10.0"
+HOOK_VERSION = "2.10.1"
 HOOKS_PATH = "/claude/v1/hooks"
 HOOKS_PATH_V2 = "/claude/v2/hooks"
 DEBUG_LOG_FILENAME = "claude-code-guardrails-debug.log"
@@ -84,32 +83,11 @@ def llm_base_url(env=None):
     return env.get(url_var) or ""
 
 
-def clean_url(url):
-    """scheme://host[:port]/path of a URL, or "". Userinfo, query and fragment are
-    dropped and secret-looking substrings masked: a configured base URL can carry
-    credentials in any of them."""
-    try:
-        parts = urlsplit(url.strip())
-        # .port raises on a non-numeric port, where a mangled URL
-        # (https://user:secret/x@host) would otherwise carry the password.
-        host, port = parts.hostname, parts.port
-        if not parts.scheme or not host:
-            return ""
-        if ":" in host:
-            host = "[" + host + "]"
-        if port is not None:
-            host += ":" + str(port)
-        return redaction.sanitize_str(parts.scheme + "://" + host + parts.path)
-    except Exception as e:
-        debug.exc("clean_url", e)
-        return ""
-
-
 def add_llm_base_url(event):
     """Add llm_base_url to the event, best-effort: an unset URL is omitted and a
     failure adds nothing."""
     try:
-        url = clean_url(llm_base_url())
+        url = redaction.clean_url(llm_base_url())
     except Exception as e:
         debug.exc("llm base url", e)
         return
