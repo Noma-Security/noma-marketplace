@@ -31,7 +31,7 @@ from codex_mcp_discovery import (
 
 KEYCHAIN_SERVICE = "noma-guardrails"
 # equals .version in .codex-plugin/plugin.json; CI enforces it
-HOOK_VERSION = "2.8.0"
+HOOK_VERSION = "2.8.1"
 HOOKS_PATH = "/codex/v1/hooks"
 HOOKS_PATH_V2 = "/codex/v2/hooks"
 DEBUG_LOG_FILENAME = "codex-guardrails-debug.log"

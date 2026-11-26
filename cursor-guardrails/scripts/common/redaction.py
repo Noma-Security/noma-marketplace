@@ -46,10 +46,13 @@ def sanitize_str(s):
     return s
 
 
+_DEFAULT_PORTS = {"https": 443, "http": 80}
+
+
 def clean_url(url):
-    """scheme://host[:port]/path of a URL, or "". Userinfo, query and fragment are
-    dropped and secret-looking substrings masked: a configured base URL can carry
-    credentials in any of them."""
+    """host[:port] of a URL, or "". Scheme, userinfo, path, query, fragment and the
+    scheme's default port are dropped and secret-looking substrings of the host masked:
+    a configured base URL can carry credentials in any of them."""
     try:
         parts = urlsplit(url.strip())
         # A mangled URL (https://user:secret/x@host): urlsplit reads the password as the
@@ -62,9 +65,9 @@ def clean_url(url):
         # An IPv6 host: urlsplit strips its brackets ([::1] -> ::1), the URL needs them back.
         if ":" in host:
             host = "[" + host + "]"
-        if port is not None:
+        if port is not None and port != _DEFAULT_PORTS.get(parts.scheme):
             host += ":" + str(port)
-        return sanitize_str(parts.scheme + "://" + host + parts.path)
+        return sanitize_str(host)
     except Exception as e:
         # Type only: the ValueError for a bad port quotes it, and it can be a password.
         debug.log("clean_url: " + type(e).__name__)
